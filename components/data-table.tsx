@@ -268,7 +268,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
           </Label>
           <Select>
             <SelectTrigger
-              className="w-38 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate"
+              className="w-38 data-[slot=select-value]:**:block data-[slot=select-value]:**:truncate"
               size="sm"
               id={`${row.original.id}-reviewer`}
             >
@@ -425,7 +425,7 @@ export function DataTable({
             <SelectItem value="focus-documents">Focus Documents</SelectItem>
           </SelectContent>
         </Select>
-        <TabsList className="**:data-[slot=badge]:bg-muted-foreground/30 hidden **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:px-1 @4xl/main:flex">
+        <TabsList className="data-[slot=badge]:**:bg-muted-foreground/30 hidden data-[slot=badge]:**:size-5 data-[slot=badge]:**:rounded-full data-[slot=badge]:**:px-1 @4xl/main:flex">
           <TabsTrigger value="outline">Outline</TabsTrigger>
           <TabsTrigger value="past-performance">
             Past Performance <Badge variant="secondary">3</Badge>
@@ -506,7 +506,7 @@ export function DataTable({
                   </TableRow>
                 ))}
               </TableHeader>
-              <TableBody className="**:data-[slot=table-cell]:first:w-8">
+              <TableBody className="first:data-[slot=table-cell]:**:w-8">
                 {table.getRowModel().rows?.length ? (
                   <SortableContext
                     items={dataIds}
