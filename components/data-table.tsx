@@ -45,7 +45,7 @@ export interface DataTableFilter<T> {
 
 export type PageSizeOption = 10 | 25 | 50 | 100
 
-export interface DataTableProps<T extends Record<string, unknown>> {
+export interface DataTableProps<T extends object> {
   /** Data rows */
   data: T[]
   /** Column definitions */
@@ -96,7 +96,7 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDirection }) {
   )
 }
 
-export function DataTable<T extends Record<string, unknown>>({
+export function DataTable<T extends object>({
   data,
   columns,
   rowKey,
