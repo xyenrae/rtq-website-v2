@@ -2,21 +2,21 @@
 
 import * as React from 'react'
 import {
-  IconCamera,
-  IconChartBar,
   IconDashboard,
-  IconDatabase,
-  IconFileAi,
-  IconFileDescription,
-  IconFileWord,
-  IconFolder,
-  IconHelp,
-  IconInnerShadowTop,
-  IconListDetails,
-  IconReport,
-  IconSearch,
-  IconSettings,
+  IconNews,
+  IconTags,
+  IconPhoto,
+  IconFolders,
+  IconBell,
+  IconCalendarEvent,
+  IconSchool,
   IconUsers,
+  IconChalkboard,
+  IconBuildingCommunity,
+  IconReportMoney,
+  IconReportAnalytics,
+  IconSettings,
+  IconShieldHalfFilled,
 } from '@tabler/icons-react'
 
 import { NavDocuments } from '@/components/nav-documents'
@@ -35,8 +35,8 @@ import {
 
 const data = {
   user: {
-    name: 'shadcn',
-    email: 'm@example.com',
+    name: 'Admin Pondok',
+    email: 'admin@pesantren.id',
     avatar: '/avatars/shadcn.jpg',
   },
   navMain: [
@@ -46,58 +46,69 @@ const data = {
       icon: IconDashboard,
     },
     {
-      title: 'Lifecycle',
-      url: '/protected/lifecycle',
-      icon: IconListDetails,
+      title: 'Berita',
+      url: '/protected/berita',
+      icon: IconNews,
     },
     {
-      title: 'Analytics',
-      url: '/protected/analytics',
-      icon: IconChartBar,
+      title: 'Kategori Berita',
+      url: '/protected/berita/kategori',
+      icon: IconTags,
     },
     {
-      title: 'Projects',
-      url: '/protected/projects',
-      icon: IconFolder,
+      title: 'Galeri',
+      url: '/protected/galeri',
+      icon: IconPhoto,
     },
     {
-      title: 'Team',
-      url: '/protected/team',
+      title: 'Kategori Galeri',
+      url: '/protected/galeri/kategori',
+      icon: IconFolders,
+    },
+    {
+      title: 'Pengumuman',
+      url: '/protected/pengumuman',
+      icon: IconBell,
+    },
+    {
+      title: 'Agenda Kegiatan',
+      url: '/protected/agenda',
+      icon: IconCalendarEvent,
+    },
+  ],
+  // Menggunakan array 'documents' bawaan template untuk data Master
+  documents: [
+    {
+      name: 'Data Guru',
+      url: '/protected/guru',
+      icon: IconSchool,
+    },
+    {
+      name: 'Data Santri',
+      url: '/protected/santri',
       icon: IconUsers,
+    },
+    {
+      name: 'Data Kelas',
+      url: '/protected/kelas',
+      icon: IconChalkboard,
     },
   ],
   navSecondary: [
     {
-      title: 'Settings',
-      url: '/protected/settings',
+      title: 'Keuangan & SPP',
+      url: '/protected/keuangan',
+      icon: IconReportMoney,
+    },
+    {
+      title: 'Laporan',
+      url: '/protected/laporan',
+      icon: IconReportAnalytics,
+    },
+    {
+      title: 'Pengaturan',
+      url: '/protected/pengaturan',
       icon: IconSettings,
-    },
-    {
-      title: 'Get Help',
-      url: '/protected/help',
-      icon: IconHelp,
-    },
-    {
-      title: 'Search',
-      url: '/protected/search',
-      icon: IconSearch,
-    },
-  ],
-  documents: [
-    {
-      name: 'Data Library',
-      url: '/protected/datalibrary',
-      icon: IconDatabase,
-    },
-    {
-      name: 'Reports',
-      url: '/protected/reports',
-      icon: IconReport,
-    },
-    {
-      name: 'Word Assistant',
-      url: '/protected/wordassistant',
-      icon: IconFileWord,
     },
   ],
 }
@@ -110,16 +121,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
               <a href="#">
-                <IconInnerShadowTop className="!size-5" />
-                <span className="text-base font-semibold">Acme Inc.</span>
+                {/* Ikon Logo Aplikasi */}
+                <IconShieldHalfFilled className="!size-6 text-primary" />
+                <span className="text-lg font-bold tracking-tight">Sistem Ponpes</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
+        {/* Menu Operasional & Konten */}
         <NavMain items={data.navMain} />
+
+        {/* Master Data Akademik */}
         <NavDocuments items={data.documents} />
+
+        {/* Menu Sistem & Laporan */}
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
