@@ -13,7 +13,7 @@ export default function ProtectedPage() {
         <ChartAreaInteractive />
       </div>
 
-      <DataTable data={data} />
+      {/* <DataTable data={data} /> */}
     </>
   )
 }
