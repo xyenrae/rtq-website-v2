@@ -538,7 +538,7 @@ export default function BeritaPage() {
         data={data}
         columns={columns}
         rowKey="id"
-        pageSize={7}
+        pageSize={10}
         searchFields={['judul']}
         searchPlaceholder="Cari berita..."
         filters={tableFilters}

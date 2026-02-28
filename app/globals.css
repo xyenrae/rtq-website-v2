@@ -138,6 +138,40 @@
   body {
     @apply bg-background text-foreground;
   }
+  input,
+  textarea,
+  select {
+    @apply border-border bg-background text-foreground transition-colors duration-200;
+  }
+  input:focus,
+  textarea:focus,
+  select:focus {
+    @apply outline-none ring-1 ring-ring border-ring;
+  }
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    @apply outline-none ring-1 ring-ring border-ring;
+  }
+  input::placeholder,
+  textarea::placeholder {
+    @apply text-muted-foreground;
+  }
+  input[type='file']::file-selector-button {
+    @apply bg-secondary text-secondary-foreground border border-border px-3 py-1 rounded-md;
+  }
+  button,
+  [role='button'],
+  a,
+  input[type='submit'],
+  input[type='button'],
+  input[type='reset'] {
+    cursor: pointer;
+  }
+  button:disabled,
+  input:disabled {
+    cursor: not-allowed;
+  }
 }
 
 @layer utilities {
@@ -192,4 +226,11 @@
   --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
   --sidebar-border: hsl(240 3.7% 15.9%);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
+}
+
+/* Remove ALL focus ring globally */
+:focus,
+:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }

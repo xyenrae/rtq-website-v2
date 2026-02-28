@@ -12,7 +12,13 @@ import {
   IconRefresh,
   IconFilter,
 } from '@tabler/icons-react'
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type SortDirection = 'asc' | 'desc'
@@ -37,6 +43,8 @@ export interface DataTableFilter<T> {
   options: { label: string; value: string }[]
 }
 
+export type PageSizeOption = 10 | 25 | 50 | 100
+
 export interface DataTableProps<T extends Record<string, unknown>> {
   /** Data rows */
   data: T[]
@@ -44,8 +52,10 @@ export interface DataTableProps<T extends Record<string, unknown>> {
   columns: ColumnDef<T>[]
   /** Unique row key field */
   rowKey: keyof T
-  /** Page size (default 10) */
-  pageSize?: number
+  /** Default page size (default 10) */
+  pageSize?: PageSizeOption
+  /** Available page size options (default [10, 25, 50, 100]) */
+  pageSizeOptions?: PageSizeOption[]
   /** Searchable fields */
   searchFields?: (keyof T)[]
   /** Search placeholder */
@@ -90,7 +100,8 @@ export function DataTable<T extends Record<string, unknown>>({
   data,
   columns,
   rowKey,
-  pageSize = 10,
+  pageSize: defaultPageSize = 10,
+  pageSizeOptions = [10, 25, 50, 100],
   searchFields = [],
   searchPlaceholder = 'Cari...',
   filters = [],
@@ -107,10 +118,11 @@ export function DataTable<T extends Record<string, unknown>>({
     Object.fromEntries(filters.map((f) => [String(f.key), '']))
   )
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState<PageSizeOption>(defaultPageSize)
   const [sortKey, setSortKey] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<SortDirection>('asc')
   const [selectedKeys, setSelectedKeys] = useState<Set<unknown>>(new Set())
-  const [confirmDeleteKey, setConfirmDeleteKey] = useState<unknown>(null)
+  const [openPageSize, setOpenPageSize] = useState(false)
 
   // ── Active filter dropdowns ──
   const [openFilter, setOpenFilter] = useState<string | null>(null)
@@ -124,6 +136,12 @@ export function DataTable<T extends Record<string, unknown>>({
       setSortDir('asc')
       return key
     })
+  }, [])
+
+  // ── Handle page size change — reset to page 1 ──
+  const handlePageSizeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    setPageSize(Number(e.target.value) as PageSizeOption)
+    setPage(1)
   }, [])
 
   const filtered = useMemo(() => {
@@ -235,7 +253,7 @@ export function DataTable<T extends Record<string, unknown>>({
                 setPage(1)
               }}
               placeholder={searchPlaceholder}
-              className="w-full pl-8 pr-3 py-2 text-sm bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground placeholder:text-muted-foreground"
+              className="w-full pl-8 pr-3 py-2 text-sm bg-background border border-input rounded-lg focus:outline-none focus:ring-1 focus:ring-ring text-foreground placeholder:text-muted-foreground"
             />
           </div>
         )}
@@ -317,17 +335,16 @@ export function DataTable<T extends Record<string, unknown>>({
         {selectable && selectedKeys.size > 0 && (
           <button
             onClick={handleBulkDelete}
-            className="flex items-center gap-1.5 text-sm text-destructive border border-destructive/30 px-3 py-2 rounded-lg hover:bg-destructive/5 transition-colors font-medium"
+            className="flex items-center gap-1.5 text-sm text-muted-foreground bg-destructive/20 border border-destructive px-3 py-2 rounded-lg hover:bg-destructive/5 transition-colors font-medium"
           >
-            <IconTrash size={14} />
-            Hapus {selectedKeys.size}
+            <IconTrash size={14} className="text-foreground" />
+            Hapus <span className="text-foreground">{selectedKeys.size}</span>
           </button>
         )}
 
         {/* Extra toolbar */}
         {toolbarExtra}
       </div>
-
       {/* ── Table ── */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -431,39 +448,76 @@ export function DataTable<T extends Record<string, unknown>>({
       </div>
 
       {/* ── Footer / Pagination ── */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-card text-sm text-muted-foreground flex-wrap gap-2">
-        <span>
-          Menampilkan{' '}
-          <span className="font-semibold text-foreground">
-            {filtered.length === 0 ? 0 : (safePage - 1) * pageSize + 1}
-          </span>
-          {' – '}
-          <span className="font-semibold text-foreground">
-            {Math.min(safePage * pageSize, filtered.length)}
-          </span>
-          {' dari '}
-          <span className="font-semibold text-foreground">{filtered.length}</span>
-        </span>
+      <div className="flex items-center justify-between px-5 py-3 border-t border-border bg-card text-sm flex-wrap gap-4">
+        {/* LEFT SIDE */}
+        <div className="flex items-center gap-6 text-muted-foreground">
+          {/* Rows per page */}
+          <div className="flex items-center gap-2">
+            <span className="whitespace-nowrap text-muted-foreground">Baris per halaman:</span>{' '}
+            <Select
+              value={String(pageSize)}
+              onValueChange={(val) => {
+                setPageSize(Number(val) as PageSizeOption)
+                setPage(1)
+              }}
+            >
+              <SelectTrigger className="h-9 w-[110px] bg-background border border-border rounded-lg text-sm">
+                <SelectValue placeholder="Rows" />
+              </SelectTrigger>
 
+              <SelectContent
+                align="start"
+                side="bottom"
+                className="rounded-xl border border-border bg-popover shadow-xl"
+              >
+                {pageSizeOptions.map((size) => (
+                  <SelectItem key={size} value={String(size)} className="cursor-pointer">
+                    <span className="text-foreground semibold">{size}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Range Info */}
+          <span className="whitespace-nowrap text-sm">
+            <span className="text-muted-foreground">Menampilkan </span>
+
+            <span className="text-foreground font-semibold">
+              {filtered.length === 0
+                ? '0'
+                : `${(safePage - 1) * pageSize + 1}–${Math.min(
+                    safePage * pageSize,
+                    filtered.length
+                  )}`}
+            </span>
+
+            <span className="text-muted-foreground"> dari </span>
+
+            <span className="text-foreground font-semibold">{filtered.length}</span>
+          </span>
+        </div>
+
+        {/* RIGHT SIDE PAGINATION */}
         <div className="flex items-center gap-1">
           <button
             disabled={safePage <= 1}
             onClick={() => setPage((p) => p - 1)}
-            className="p-1.5 rounded-lg border border-input disabled:opacity-40 hover:enabled:bg-accent transition-colors"
+            className="p-2 rounded-md border border-input disabled:opacity-40 hover:enabled:bg-accent transition-colors"
           >
-            <IconChevronLeft size={14} />
+            <IconChevronLeft size={16} />
           </button>
 
           {pageNums.map((p, i) =>
             p === '...' ? (
-              <span key={`e${i}`} className="px-1.5 text-muted-foreground/60">
+              <span key={`e${i}`} className="px-2 text-muted-foreground/50">
                 …
               </span>
             ) : (
               <button
                 key={p}
                 onClick={() => setPage(p as number)}
-                className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
+                className={`min-w-[36px] h-9 px-2 rounded-md text-sm font-medium transition-colors ${
                   safePage === p
                     ? 'bg-primary text-primary-foreground shadow-sm'
                     : 'border border-input text-foreground hover:bg-accent'
@@ -477,9 +531,9 @@ export function DataTable<T extends Record<string, unknown>>({
           <button
             disabled={safePage >= totalPages}
             onClick={() => setPage((p) => p + 1)}
-            className="p-1.5 rounded-lg border border-input disabled:opacity-40 hover:enabled:bg-accent transition-colors"
+            className="p-2 rounded-md border border-input disabled:opacity-40 hover:enabled:bg-accent transition-colors"
           >
-            <IconChevronRight size={14} />
+            <IconChevronRight size={16} />
           </button>
         </div>
       </div>
