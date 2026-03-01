@@ -14,6 +14,7 @@ import {
   IconChartBar,
 } from '@tabler/icons-react'
 import { DataTable, type ColumnDef, type DataTableFilter } from '@/components/data-table'
+import { ModalTambahBerita } from '@/components/protected/berita/modal-tambah-berita'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -143,26 +144,6 @@ const INITIAL_DATA: Berita[] = [
   },
 ]
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const KATEGORI_STYLE: Record<Kategori, string> = {
-  Pendidikan:
-    'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800',
-  Kegiatan:
-    'bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-950 dark:text-sky-300 dark:border-sky-800',
-  Pengumuman:
-    'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800',
-  Artikel:
-    'bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-950 dark:text-violet-300 dark:border-violet-800',
-}
-
-const KATEGORI_DOT: Record<Kategori, string> = {
-  Pendidikan: 'bg-emerald-500',
-  Kegiatan: 'bg-sky-500',
-  Pengumuman: 'bg-amber-500',
-  Artikel: 'bg-violet-500',
-}
-
 function formatTanggal(iso: string) {
   return new Date(iso).toLocaleDateString('id-ID', {
     day: '2-digit',
@@ -200,128 +181,6 @@ function StatCard({
   )
 }
 
-// ─── Modal Tambah ─────────────────────────────────────────────────────────────
-
-function ModalTambah({
-  open,
-  onClose,
-  onSave,
-}: {
-  open: boolean
-  onClose: () => void
-  onSave: (b: Omit<Berita, 'id'>) => void
-}) {
-  const [form, setForm] = useState<{
-    judul: string
-    kategori: Kategori
-    waktuBaca: number
-    status: Status
-  }>({
-    judul: '',
-    kategori: 'Pendidikan',
-    waktuBaca: 2,
-    status: 'published',
-  })
-
-  if (!open) return null
-
-  const labelClass = 'block text-sm font-medium text-foreground mb-1.5'
-  const inputClass =
-    'w-full border border-input rounded-lg px-3.5 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground'
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="text-lg font-bold text-foreground mb-5">Tambah Berita Baru</h2>
-
-        <div className="space-y-4">
-          <div>
-            <label className={labelClass}>Judul Berita</label>
-            <input
-              className={inputClass}
-              placeholder="Masukkan judul berita..."
-              value={form.judul}
-              onChange={(e) => setForm((f) => ({ ...f, judul: e.target.value }))}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelClass}>Kategori</label>
-              <select
-                className={inputClass}
-                value={form.kategori}
-                onChange={(e) => setForm((f) => ({ ...f, kategori: e.target.value as Kategori }))}
-              >
-                {(['Pendidikan', 'Kegiatan', 'Pengumuman', 'Artikel'] as Kategori[]).map((k) => (
-                  <option key={k}>{k}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className={labelClass}>Waktu Baca (menit)</label>
-              <input
-                type="number"
-                min={1}
-                max={60}
-                className={inputClass}
-                value={form.waktuBaca}
-                onChange={(e) => setForm((f) => ({ ...f, waktuBaca: Number(e.target.value) }))}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className={labelClass}>Status</label>
-            <div className="flex gap-2">
-              {(['published', 'draft'] as Status[]).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setForm((f) => ({ ...f, status: s }))}
-                  className={`flex-1 py-2.5 rounded-lg text-sm font-medium border transition-colors ${
-                    form.status === s
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'bg-background text-muted-foreground border-input hover:border-primary/40'
-                  }`}
-                >
-                  {s === 'published' ? 'Published' : 'Draft'}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex gap-2.5 mt-6">
-          <button
-            onClick={onClose}
-            className="flex-1 py-2.5 rounded-lg border border-input text-sm font-medium text-foreground hover:bg-accent transition-colors"
-          >
-            Batal
-          </button>
-          <button
-            onClick={() => {
-              if (!form.judul.trim()) return
-              onSave({ ...form, tanggalDibuat: new Date().toISOString().split('T')[0], views: 0 })
-              onClose()
-              setForm({ judul: '', kategori: 'Pendidikan', waktuBaca: 2, status: 'published' })
-            }}
-            className="flex-1 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
-          >
-            Simpan Berita
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function BeritaPage() {
@@ -331,6 +190,28 @@ export default function BeritaPage() {
 
   const totalViews = data.reduce((a, b) => a + b.views, 0)
   const publishedCount = data.filter((b) => b.status === 'published').length
+
+  const DYNAMIC_COLORS = [
+    { text: 'text-blue-600 dark:text-blue-400', dot: 'bg-blue-600 dark:bg-blue-400' },
+    { text: 'text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-600 dark:bg-emerald-400' },
+    { text: 'text-amber-600 dark:text-amber-400', dot: 'bg-amber-600 dark:bg-amber-400' },
+    { text: 'text-violet-600 dark:text-violet-400', dot: 'bg-violet-600 dark:bg-violet-400' },
+    { text: 'text-rose-600 dark:text-rose-400', dot: 'bg-rose-600 dark:bg-rose-400' },
+    { text: 'text-cyan-600 dark:text-cyan-400', dot: 'bg-cyan-600 dark:bg-cyan-400' },
+    { text: 'text-orange-600 dark:text-orange-400', dot: 'bg-orange-600 dark:bg-orange-400' },
+  ]
+
+  const getCategoryStyle = (categoryName: string) => {
+    if (!categoryName) return DYNAMIC_COLORS[0]
+
+    let hash = 0
+    for (let i = 0; i < categoryName.length; i++) {
+      hash = categoryName.charCodeAt(i) + ((hash << 5) - hash)
+    }
+
+    const index = Math.abs(hash) % DYNAMIC_COLORS.length
+    return DYNAMIC_COLORS[index]
+  }
 
   // ── Column definitions ────────────────────────────────────────────────────
 
@@ -348,14 +229,16 @@ export default function BeritaPage() {
     {
       key: 'kategori',
       header: 'Kategori',
-      cell: (row) => (
-        <span
-          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${KATEGORI_STYLE[row.kategori]}`}
-        >
-          <span className={`w-1.5 h-1.5 rounded-full ${KATEGORI_DOT[row.kategori]}`} />
-          {row.kategori}
-        </span>
-      ),
+      cell: (row) => {
+        const style = getCategoryStyle(row.kategori)
+
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-secondary/50 border-border dark:bg-white/5 dark:border-white/10">
+            <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
+            <span className={style.text}>{row.kategori}</span>
+          </span>
+        )
+      },
     },
     {
       key: 'tanggalDibuat',
@@ -499,7 +382,7 @@ export default function BeritaPage() {
         </button>
       </div>
 
-      <hr className='my-4'/>
+      <hr className="my-4" />
 
       {/* ── Stats ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -553,7 +436,7 @@ export default function BeritaPage() {
       />
 
       {/* ── Modal ── */}
-      <ModalTambah
+      <ModalTambahBerita
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSave={(berita) =>
