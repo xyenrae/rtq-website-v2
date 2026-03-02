@@ -76,13 +76,37 @@ export async function insertBerita(payload: BeritaInsert): Promise<Berita> {
   return data as Berita
 }
 
-export async function updateBerita(id: string, payload: Partial<BeritaInsert>): Promise<Berita> {
+export async function updateBerita(
+  id: string,
+  payload: Partial<{
+    judul: string
+    slug: string
+    konten: string
+    ringkasan: string
+    gambar: string | null
+    waktu_baca: number
+    status: Status
+    kategori_id: string
+    tanggal_diterbitkan: string
+  }>
+): Promise<Berita> {
   const supabase = getClient()
   const { data, error } = await supabase
     .from('berita')
-    .update({ ...payload, updated_at: new Date().toISOString() })
+    .update({
+      ...payload,
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', id)
-    .select('*, berita_kategori(id, nama)')
+    .select(
+      `
+      *,
+      berita_kategori (
+        id,
+        nama
+      )
+    `
+    )
     .single()
 
   if (error) throw error

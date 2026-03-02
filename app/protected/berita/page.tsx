@@ -18,6 +18,7 @@ import {
 } from '@tabler/icons-react'
 import { DataTable, type ColumnDef, type DataTableFilter } from '@/components/data-table'
 import { ModalTambahBerita } from '@/components/protected/berita/modal-tambah-berita'
+import { ModalEditBerita } from '@/components/protected/berita/modal-edit-berita'
 import {
   fetchBerita,
   fetchKategori,
@@ -98,6 +99,11 @@ export default function BeritaPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [editBerita, setEditBerita] = useState<Berita | null>(null)
+
+  function handleUpdate(updated: Berita) {
+    setData((d) => d.map((b) => (b.id === updated.id ? updated : b)))
+  }
 
   // ── Load data ──────────────────────────────────────────────────────────────
 
@@ -266,6 +272,7 @@ export default function BeritaPage() {
         >
           {/* Edit — bisa dikembangkan dengan ModalEditBerita */}
           <button
+            onClick={() => setEditBerita(row)}
             className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"
             title="Edit"
           >
@@ -424,6 +431,16 @@ export default function BeritaPage() {
         onSave={handleSave}
         kategoris={kategoris}
       />
+
+      {editBerita && (
+        <ModalEditBerita
+          open={!!editBerita}
+          onClose={() => setEditBerita(null)}
+          onUpdate={handleUpdate}
+          berita={editBerita}
+          kategoris={kategoris}
+        />
+      )}
     </div>
   )
 }
