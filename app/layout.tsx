@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Geist } from 'next/font/google'
 import { ThemeProvider } from 'next-themes'
 import GlobalLoader from '@/components/global-loader'
+import { Toaster } from 'sonner'
 import './globals.css'
 
 const defaultUrl = process.env.VERCEL_URL
@@ -34,6 +35,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <Toaster richColors position="top-center" />
           <GlobalLoader />
           {children}
         </ThemeProvider>

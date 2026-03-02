@@ -36,6 +36,7 @@ import {
   type Berita,
   type Status,
 } from '@/lib/berita'
+import { toast } from 'sonner'
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
 
@@ -966,8 +967,17 @@ export function ModalTambahBerita({ open, onClose, onSave, kategoris }: ModalTam
       })
 
       onSave(result)
+      toast.success('Berita berhasil disimpan', {
+        description: `Status: ${form.status === 'published' ? 'Dipublikasikan' : 'Draft'} • ${form.kategori}`,
+        duration: 3000,
+      })
       requestClose(true, 'save')
     } catch (e: unknown) {
+      toast.error('Gagal menyimpan berita', {
+        description:
+          e instanceof Error ? e.message : 'Terjadi kesalahan pada server. Silakan coba lagi.',
+        duration: 5000,
+      })
       setSaveError(e instanceof Error ? e.message : 'Gagal menyimpan berita. Coba lagi.')
     } finally {
       setSaving(false)
@@ -1213,6 +1223,9 @@ export function ModalTambahBerita({ open, onClose, onSave, kategoris }: ModalTam
         variant="danger"
         onConfirm={() => {
           setShowCloseConfirm(false)
+          toast.warning('Perubahan dibuang', {
+            description: 'Data formulir yang belum disimpan telah dihapus.',
+          })
           if (pendingCloseAction) {
             pendingCloseAction()
             setPendingCloseAction(null)
