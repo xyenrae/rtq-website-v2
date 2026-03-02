@@ -17,6 +17,7 @@ export interface BeritaKategori {
 }
 
 export interface Berita {
+  tanggal_diterbitkan: any
   id: string
   judul: string
   slug: string

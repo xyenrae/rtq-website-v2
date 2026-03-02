@@ -378,6 +378,10 @@ function Step2({ ringkasan, konten, errors, onChange }: Step2Props) {
 }
 
 // ─── Step 3: Media ────────────────────────────────────────────────────────────
+const ALLOWED_MIME = ['image/png', 'image/jpeg']
+const ALLOWED_LABEL = 'PNG atau JPG'
+const MAX_SIZE_BYTES = 1 * 1024 * 1024 // 1 MB
+const MAX_SIZE_LABEL = '1 MB'
 
 interface Step3Props {
   thumbnail: string
@@ -385,6 +389,7 @@ interface Step3Props {
   errors: Partial<Record<string, string>>
   onThumbnailUrlChange: (url: string) => void
   onThumbnailFileChange: (file: File | null) => void
+  onFileError: (message: string | null) => void // ← tambah prop ini
 }
 
 function Step3({
@@ -393,27 +398,63 @@ function Step3({
   errors,
   onThumbnailUrlChange,
   onThumbnailFileChange,
+  onFileError,
 }: Step3Props) {
   const [mode, setMode] = useState<'url' | 'upload'>('url')
   const fileRef = useRef<HTMLInputElement>(null)
   const [previewError, setPreviewError] = useState(false)
 
   const previewSrc = thumbnailFile ? URL.createObjectURL(thumbnailFile) : thumbnail
+  function validateAndSetFile(file: File | null) {
+    if (!file) {
+      onThumbnailFileChange(null)
+      onFileError(null)
+      return
+    }
 
-  // Auto-select upload mode if there's a file already
-  useEffect(() => {
-    if (thumbnailFile) setMode('upload')
-  }, [thumbnailFile])
+    if (!ALLOWED_MIME.includes(file.type)) {
+      const message = `Format tidak didukung: ${file.type || 'unknown'}. Gunakan ${ALLOWED_LABEL}.`
+
+      onFileError(message)
+      onThumbnailFileChange(null)
+
+      toast.error(message, {
+        duration: 5000,
+      })
+
+      return
+    }
+
+    if (file.size > MAX_SIZE_BYTES) {
+      const sizeMB = (file.size / 1024 / 1024).toFixed(2)
+      const message = `File terlalu besar (${sizeMB} MB). Maksimal ${MAX_SIZE_LABEL}.`
+
+      onFileError(message)
+      onThumbnailFileChange(null)
+
+      toast.error(message, {
+        duration: 5000,
+      })
+
+      return
+    }
+
+    onFileError(null)
+    onThumbnailFileChange(file)
+    onThumbnailUrlChange('')
+    setPreviewError(false)
+  }
 
   const handleFileDrop = (e: React.DragEvent) => {
     e.preventDefault()
-    const file = e.dataTransfer.files[0]
-    if (file && file.type.startsWith('image/')) {
-      onThumbnailFileChange(file)
-      onThumbnailUrlChange('')
-      setPreviewError(false)
-    }
+    const file = e.dataTransfer.files[0] ?? null
+    validateAndSetFile(file)
   }
+
+  // Auto-switch ke tab upload jika sudah ada file (untuk edit modal)
+  useEffect(() => {
+    if (thumbnailFile) setMode('upload')
+  }, [thumbnailFile])
 
   return (
     <div className="space-y-5">
@@ -473,13 +514,12 @@ function Step3({
             <input
               ref={fileRef}
               type="file"
-              accept="image/*"
+              accept=".png,.jpg,.jpeg,image/png,image/jpeg"
               className="hidden"
               onChange={(e) => {
-                const file = e.target.files?.[0] ?? null
-                onThumbnailFileChange(file)
-                onThumbnailUrlChange('')
-                setPreviewError(false)
+                validateAndSetFile(e.target.files?.[0] ?? null)
+                // reset input value agar file yang sama bisa dipilih ulang
+                e.target.value = ''
               }}
             />
             <div className="p-3 rounded-full bg-background border border-border">
@@ -905,6 +945,13 @@ export function ModalEditBerita({
     }
   }
 
+  const handleFileError = (message: string | null) => {
+    setErrors((prev) => ({
+      ...prev,
+      thumbnail: message || undefined,
+    }))
+  }
+
   const handleChange = (field: string, value: string | boolean | number | File | null) => {
     setForm((prev) => {
       const next = { ...prev, [field]: value }
@@ -1166,13 +1213,10 @@ export function ModalEditBerita({
                 <Step3
                   thumbnail={form.thumbnail}
                   thumbnailFile={form.thumbnailFile}
-                  errors={{
-                    ...errors,
-                    thumbnail: form.thumbnailError ?? errors.thumbnail,
-                  }}
+                  errors={errors}
                   onThumbnailUrlChange={(url) => handleChange('thumbnail', url)}
                   onThumbnailFileChange={(file) => handleChange('thumbnailFile', file)}
-                  onFileError={(msg) => setForm((f) => ({ ...f, thumbnailError: msg }))}
+                  onFileError={handleFileError}
                 />
               )}
               {step === 4 && (
