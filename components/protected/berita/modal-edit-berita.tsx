@@ -863,6 +863,11 @@ function validateStep(s: number, form: FormData): FormErrors {
     if (!form.konten.trim()) errors.konten = 'Konten tidak boleh kosong'
     else if (form.konten.length < 50) errors.konten = 'Konten minimal 50 karakter'
   }
+  if (s === 3) {
+    if (!form.thumbnail.trim() && !form.thumbnailFile) {
+      errors.thumbnail = 'Thumbnail wajib diisi (URL atau upload file)'
+    }
+  }
   return errors
 }
 
@@ -870,7 +875,7 @@ function getCompletedSteps(form: FormData): number[] {
   const done: number[] = []
   if (Object.keys(validateStep(1, form)).length === 0) done.push(1)
   if (done.includes(1) && Object.keys(validateStep(2, form)).length === 0) done.push(2)
-  if (done.includes(2)) done.push(3)
+  if (done.includes(2) && Object.keys(validateStep(3, form)).length === 0) done.push(3)
   if (done.includes(3)) done.push(4)
   return done
 }
@@ -988,8 +993,8 @@ export function ModalEditBerita({
   // ── Update ke Supabase ──────────────────────────────────────────────────────
 
   const handleSave = async () => {
-    // Validasi step 1 & 2
-    for (let s = 1; s <= 2; s++) {
+    // Validasi step 1 - 3
+    for (let s = 1; s <= 3; s++) {
       const errs = validateStep(s, form)
       if (Object.keys(errs).length) {
         setErrors(errs)

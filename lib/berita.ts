@@ -141,6 +141,8 @@ export async function deleteBulkBerita(ids: string[]): Promise<void> {
  * Nama: "berita-images", centang "Public bucket".
  */
 export async function uploadGambar(file: File): Promise<string> {
+  const supabase = getClient()
+
   // ── Validasi tipe ──────────────────────────────────────────────────────────
   if (!(ALLOWED_TYPES as readonly string[]).includes(file.type)) {
     throw new UploadValidationError('Format file tidak didukung. Hanya PNG dan JPG yang diizinkan.')
@@ -165,7 +167,7 @@ export async function uploadGambar(file: File): Promise<string> {
 
   if (error) throw new Error(error.message)
 
-  const { data: urlData } = supabase.storage.from('berita-gambar').getPublicUrl(data.path)
+  const { data: urlData } = supabase.storage.from('berita-images').getPublicUrl(data.path)
 
   return urlData.publicUrl
 }
