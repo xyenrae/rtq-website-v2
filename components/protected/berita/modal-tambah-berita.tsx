@@ -393,6 +393,10 @@ function Step2({ ringkasan, konten, errors, onChange }: Step2Props) {
 }
 
 // ─── Step 3: Media ────────────────────────────────────────────────────────────
+const ALLOWED_MIME = ['image/png', 'image/jpeg']
+const ALLOWED_LABEL = 'PNG atau JPG'
+const MAX_SIZE_BYTES = 1 * 1024 * 1024 // 1 MB
+const MAX_SIZE_LABEL = '1 MB'
 
 interface Step3Props {
   thumbnail: string
@@ -400,6 +404,7 @@ interface Step3Props {
   errors: Partial<Record<string, string>>
   onThumbnailUrlChange: (url: string) => void
   onThumbnailFileChange: (file: File | null) => void
+  onFileError: (message: string | null) => void // ← tambah prop ini
 }
 
 function Step3({
@@ -408,6 +413,7 @@ function Step3({
   errors,
   onThumbnailUrlChange,
   onThumbnailFileChange,
+  onFileError,
 }: Step3Props) {
   const [mode, setMode] = useState<'url' | 'upload'>('url')
   const fileRef = useRef<HTMLInputElement>(null)
@@ -415,15 +421,56 @@ function Step3({
 
   const previewSrc = thumbnailFile ? URL.createObjectURL(thumbnailFile) : thumbnail
 
+  function validateAndSetFile(file: File | null) {
+    if (!file) {
+      onThumbnailFileChange(null)
+      onFileError(null)
+      return
+    }
+
+    if (!ALLOWED_MIME.includes(file.type)) {
+      const message = `Format tidak didukung: ${file.type || 'unknown'}. Gunakan ${ALLOWED_LABEL}.`
+
+      onFileError(message)
+      onThumbnailFileChange(null)
+
+      toast.error(message, {
+        duration: 5000,
+      })
+
+      return
+    }
+
+    if (file.size > MAX_SIZE_BYTES) {
+      const sizeMB = (file.size / 1024 / 1024).toFixed(2)
+      const message = `File terlalu besar (${sizeMB} MB). Maksimal ${MAX_SIZE_LABEL}.`
+
+      onFileError(message)
+      onThumbnailFileChange(null)
+
+      toast.error(message, {
+        duration: 5000,
+      })
+
+      return
+    }
+
+    onFileError(null)
+    onThumbnailFileChange(file)
+    onThumbnailUrlChange('')
+    setPreviewError(false)
+  }
+
   const handleFileDrop = (e: React.DragEvent) => {
     e.preventDefault()
-    const file = e.dataTransfer.files[0]
-    if (file && file.type.startsWith('image/')) {
-      onThumbnailFileChange(file)
-      onThumbnailUrlChange('')
-      setPreviewError(false)
-    }
+    const file = e.dataTransfer.files[0] ?? null
+    validateAndSetFile(file)
   }
+
+  // Auto-switch ke tab upload jika sudah ada file (untuk edit modal)
+  useEffect(() => {
+    if (thumbnailFile) setMode('upload')
+  }, [thumbnailFile])
 
   return (
     <div className="space-y-5">
@@ -465,6 +512,7 @@ function Step3({
               onChange={(e) => {
                 onThumbnailUrlChange(e.target.value)
                 onThumbnailFileChange(null)
+                onFileError(null)
                 setPreviewError(false)
               }}
               className="flex-1 px-3 py-2.5 text-sm bg-transparent text-foreground placeholder:text-muted-foreground"
@@ -476,24 +524,33 @@ function Step3({
             onDragOver={(e) => e.preventDefault()}
             onClick={() => fileRef.current?.click()}
             className={cn(
-              'flex flex-col items-center justify-center gap-3 py-10 border-2 border-dashed border-border rounded-xl bg-muted/30',
-              'cursor-pointer hover:border-primary/40 hover:bg-muted/50 transition-colors'
+              'flex flex-col items-center justify-center gap-3 py-10 border-2 border-dashed rounded-xl bg-muted/30',
+              'cursor-pointer transition-colors',
+              errors.thumbnail
+                ? 'border-destructive bg-destructive/5'
+                : 'border-border hover:border-primary/40 hover:bg-muted/50'
             )}
           >
             <input
               ref={fileRef}
               type="file"
-              accept="image/*"
+              accept=".png,.jpg,.jpeg,image/png,image/jpeg"
               className="hidden"
               onChange={(e) => {
-                const file = e.target.files?.[0] ?? null
-                onThumbnailFileChange(file)
-                onThumbnailUrlChange('')
-                setPreviewError(false)
+                validateAndSetFile(e.target.files?.[0] ?? null)
+                // reset input value agar file yang sama bisa dipilih ulang
+                e.target.value = ''
               }}
             />
-            <div className="p-3 rounded-full bg-background border border-border">
-              <Upload className="h-5 w-5 text-muted-foreground" />
+            <div
+              className={cn(
+                'p-3 rounded-full border',
+                errors.thumbnail
+                  ? 'bg-destructive/10 border-destructive/30 text-destructive'
+                  : 'bg-background border-border text-muted-foreground'
+              )}
+            >
+              <Upload className="h-5 w-5" />
             </div>
             <div className="text-center">
               <p className="text-sm font-medium text-foreground">
@@ -502,13 +559,23 @@ function Step3({
               <p className="text-xs text-muted-foreground mt-0.5">
                 {thumbnailFile
                   ? `${(thumbnailFile.size / 1024 / 1024).toFixed(2)} MB`
-                  : 'PNG, JPG, WEBP hingga 10MB'}
+                  : `${ALLOWED_LABEL} · Maks. ${MAX_SIZE_LABEL}`}
               </p>
             </div>
           </div>
         )}
 
+        {/* Error validasi file */}
         <FieldError message={errors.thumbnail} />
+
+        {/* Keterangan batasan (hanya di tab upload, saat belum ada file) */}
+        {mode === 'upload' && !thumbnailFile && !errors.thumbnail && (
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1.5">
+            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+            Hanya format <span className="font-semibold">{ALLOWED_LABEL}</span>, maksimal{' '}
+            <span className="font-semibold">{MAX_SIZE_LABEL}</span>
+          </p>
+        )}
 
         {/* Preview */}
         {previewSrc && !previewError && (
@@ -522,9 +589,11 @@ function Step3({
             />
             <button
               type="button"
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation()
                 onThumbnailUrlChange('')
                 onThumbnailFileChange(null)
+                onFileError(null)
                 setPreviewError(false)
               }}
               className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 border border-border text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
@@ -889,6 +958,13 @@ export function ModalTambahBerita({ open, onClose, onSave, kategoris }: ModalTam
     }
   }
 
+  const handleFileError = (message: string | null) => {
+    setErrors((prev) => ({
+      ...prev,
+      thumbnail: message || undefined,
+    }))
+  }
+
   const handleChange = (field: string, value: string | boolean | number | File | null) => {
     setForm((prev) => {
       const next = { ...prev, [field]: value }
@@ -1137,6 +1213,7 @@ export function ModalTambahBerita({ open, onClose, onSave, kategoris }: ModalTam
                   errors={errors}
                   onThumbnailUrlChange={(url) => handleChange('thumbnail', url)}
                   onThumbnailFileChange={(file) => handleChange('thumbnailFile', file)}
+                  onFileError={handleFileError}
                 />
               )}
               {step === 4 && (

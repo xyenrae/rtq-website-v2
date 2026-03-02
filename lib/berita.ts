@@ -1,9 +1,16 @@
 import { createClient } from '@/lib/supabase/client'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
 export type Status = 'published' | 'draft'
+const ALLOWED_TYPES = ['image/png', 'image/jpeg'] as const
+const MAX_FILE_SIZE = 1 * 1024 * 1024 // 1 MB
 
+export class UploadValidationError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'UploadValidationError'
+  }
+}
 export interface BeritaKategori {
   id: string
   nama: string
@@ -133,18 +140,31 @@ export async function deleteBulkBerita(ids: string[]): Promise<void> {
  * Nama: "berita-images", centang "Public bucket".
  */
 export async function uploadGambar(file: File): Promise<string> {
-  const supabase = getClient()
+  // ── Validasi tipe ──────────────────────────────────────────────────────────
+  if (!(ALLOWED_TYPES as readonly string[]).includes(file.type)) {
+    throw new UploadValidationError('Format file tidak didukung. Hanya PNG dan JPG yang diizinkan.')
+  }
 
-  const ext = file.name.split('.').pop() ?? 'jpg'
+  // ── Validasi ukuran ────────────────────────────────────────────────────────
+  if (file.size > MAX_FILE_SIZE) {
+    const sizeMB = (file.size / 1024 / 1024).toFixed(2)
+    throw new UploadValidationError(`Ukuran file terlalu besar (${sizeMB} MB). Maksimal 1 MB.`)
+  }
+
+  // ── Upload ke Supabase Storage ─────────────────────────────────────────────
+  const ext = file.type === 'image/png' ? 'png' : 'jpg'
   const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-  const path = `thumbnails/${filename}`
 
-  const { error } = await supabase.storage
-    .from('berita-images')
-    .upload(path, file, { cacheControl: '3600', upsert: false })
+  const { data, error } = await supabase.storage
+    .from('berita-images') // sesuaikan dengan nama bucket Anda
+    .upload(filename, file, {
+      contentType: file.type,
+      upsert: false,
+    })
 
-  if (error) throw error
+  if (error) throw new Error(error.message)
 
-  const { data } = supabase.storage.from('berita-images').getPublicUrl(path)
-  return data.publicUrl
+  const { data: urlData } = supabase.storage.from('berita-gambar').getPublicUrl(data.path)
+
+  return urlData.publicUrl
 }

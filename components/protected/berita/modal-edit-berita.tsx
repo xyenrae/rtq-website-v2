@@ -776,6 +776,7 @@ type FormData = {
   konten: string
   thumbnail: string
   thumbnailFile: File | null
+  thumbnailError: string | null
   status: Status
   tanggalDiterbitkan: string
 }
@@ -802,6 +803,7 @@ function makeFormFromBerita(berita: Berita, kategoris: BeritaKategori[]): FormDa
     thumbnail: berita.gambar ?? '',
     thumbnailFile: null,
     status: berita.status ?? 'draft',
+    thumbnailError: null,
     tanggalDiterbitkan: berita.tanggal_diterbitkan
       ? new Date(berita.tanggal_diterbitkan).toISOString().slice(0, 16)
       : '',
@@ -947,6 +949,11 @@ export function ModalEditBerita({
         setStep(s)
         return
       }
+    }
+
+    if (form.thumbnailError) {
+      setStep(3)
+      return
     }
 
     // Resolve kategori nama → UUID
@@ -1159,9 +1166,13 @@ export function ModalEditBerita({
                 <Step3
                   thumbnail={form.thumbnail}
                   thumbnailFile={form.thumbnailFile}
-                  errors={errors}
+                  errors={{
+                    ...errors,
+                    thumbnail: form.thumbnailError ?? errors.thumbnail,
+                  }}
                   onThumbnailUrlChange={(url) => handleChange('thumbnail', url)}
                   onThumbnailFileChange={(file) => handleChange('thumbnailFile', file)}
+                  onFileError={(msg) => setForm((f) => ({ ...f, thumbnailError: msg }))}
                 />
               )}
               {step === 4 && (
