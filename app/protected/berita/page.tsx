@@ -28,6 +28,7 @@ import {
   type Berita,
   type BeritaKategori,
 } from '@/lib/berita'
+import { toast } from 'sonner'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -137,15 +138,17 @@ export default function BeritaPage() {
   const publishedCount = data.filter((b) => b.status === 'published').length
 
   // ── Handlers ───────────────────────────────────────────────────────────────
-
   async function handleDelete(id: string) {
     setDeletingId(id)
     try {
       await deleteBerita(id)
       setData((d) => d.filter((b) => b.id !== id))
       setConfirmDeleteId(null)
+      toast.success('Berita berhasil dihapus')
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : 'Gagal menghapus berita')
+      toast.error('Gagal menghapus berita', {
+        description: e instanceof Error ? e.message : undefined,
+      })
     } finally {
       setDeletingId(null)
     }
@@ -155,8 +158,11 @@ export default function BeritaPage() {
     try {
       await deleteBulkBerita(keys)
       setData((d) => d.filter((b) => !keys.includes(b.id)))
+      toast.success(`${keys.length} berita berhasil dihapus`)
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : 'Gagal menghapus berita')
+      toast.error('Gagal menghapus beberapa berita', {
+        description: e instanceof Error ? e.message : undefined,
+      })
     }
   }
 

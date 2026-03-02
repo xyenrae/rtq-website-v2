@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   IconChevronLeft,
   IconChevronRight,
@@ -19,21 +19,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type SortDirection = 'asc' | 'desc'
+/** null = default (not set by user), 'asc' | 'desc' = user-chosen */
+export type SortState = null | 'asc' | 'desc'
+
+export interface DefaultSort {
+  key: string
+  direction: SortDirection
+}
 
 export interface ColumnDef<T> {
-  /** Unique key — also used for sorting if sortable */
   key: keyof T | string
   header: string
-  /** Optional render override */
   cell?: (row: T, index: number) => React.ReactNode
-  /** Enable column sorting */
   sortable?: boolean
-  /** Column width class e.g. "w-[200px]" */
   width?: string
-  /** Alignment */
   align?: 'left' | 'center' | 'right'
 }
 
@@ -46,35 +49,22 @@ export interface DataTableFilter<T> {
 export type PageSizeOption = 10 | 25 | 50 | 100
 
 export interface DataTableProps<T extends object> {
-  /** Data rows */
   data: T[]
-  /** Column definitions */
   columns: ColumnDef<T>[]
-  /** Unique row key field */
   rowKey: keyof T
-  /** Default page size (default 10) */
+  /** Default sort applied on load — does NOT trigger reset button */
+  defaultSort?: DefaultSort
   pageSize?: PageSizeOption
-  /** Available page size options (default [10, 25, 50, 100]) */
   pageSizeOptions?: PageSizeOption[]
-  /** Searchable fields */
   searchFields?: (keyof T)[]
-  /** Search placeholder */
   searchPlaceholder?: string
-  /** Dropdown filters */
   filters?: DataTableFilter<T>[]
-  /** Enable row selection */
   selectable?: boolean
-  /** Called with selected row keys when bulk delete triggered */
   onBulkDelete?: (keys: unknown[]) => void
-  /** Called when edit icon clicked */
   onEdit?: (row: T) => void
-  /** Called when delete icon clicked */
   onDelete?: (row: T) => void
-  /** Extra toolbar slot (right side) */
   toolbarExtra?: React.ReactNode
-  /** Empty state message */
   emptyMessage?: string
-  /** Row click handler */
   onRowClick?: (row: T) => void
 }
 
@@ -87,19 +77,39 @@ function getNestedValue<T>(row: T, key: string): unknown {
   }, row)
 }
 
-function SortIcon({ active, dir }: { active: boolean; dir: SortDirection }) {
+/**
+ * 3-state sort icon:
+ *  - neutral (not active): selector icon
+ *  - active asc: up arrow
+ *  - active desc: down arrow
+ */
+function SortIcon({
+  active,
+  dir,
+  isDefault,
+}: {
+  active: boolean
+  dir: SortState
+  isDefault: boolean
+}) {
   if (!active) return <IconSelector size={13} className="text-muted-foreground/40" />
-  return dir === 'asc' ? (
-    <IconSortAscending size={13} className="text-primary" />
-  ) : (
-    <IconSortDescending size={13} className="text-primary" />
-  )
+
+  // Active but in "default" state (set by defaultSort, not by user interaction — shown dimmer)
+  if (isDefault && dir === null)
+    return <IconSelector size={13} className="text-muted-foreground/60" />
+
+  if (dir === 'asc') return <IconSortAscending size={13} className="text-primary" />
+  if (dir === 'desc') return <IconSortDescending size={13} className="text-primary" />
+  return <IconSelector size={13} className="text-muted-foreground/40" />
 }
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export function DataTable<T extends object>({
   data,
   columns,
   rowKey,
+  defaultSort,
   pageSize: defaultPageSize = 10,
   pageSizeOptions = [10, 25, 50, 100],
   searchFields = [],
@@ -119,35 +129,70 @@ export function DataTable<T extends object>({
   )
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState<PageSizeOption>(defaultPageSize)
-  const [sortKey, setSortKey] = useState<string | null>(null)
-  const [sortDir, setSortDir] = useState<SortDirection>('asc')
-  const [selectedKeys, setSelectedKeys] = useState<Set<unknown>>(new Set())
-  const [openPageSize, setOpenPageSize] = useState(false)
 
-  // ── Active filter dropdowns ──
+  /**
+   * Sort state machine:
+   *  sortKey  — which column is sorted (null = defaultSort key or none)
+   *  userSortKey — key the USER explicitly chose (null = not overridden)
+   *  userSortDir — 'asc' | 'desc' | null (null = user hasn't touched sorting)
+   *
+   * Effective sort = userSort ?? defaultSort ?? none
+   * Reset button only appears when userSortKey !== null
+   */
+  const [userSortKey, setUserSortKey] = useState<string | null>(null)
+  const [userSortDir, setUserSortDir] = useState<SortState>(null)
+
+  const [selectedKeys, setSelectedKeys] = useState<Set<unknown>>(new Set())
   const [openFilter, setOpenFilter] = useState<string | null>(null)
 
-  const handleSort = useCallback((key: string) => {
-    setSortKey((prev) => {
-      if (prev === key) {
-        setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
-        return prev
-      }
-      setSortDir('asc')
-      return key
-    })
-  }, [])
+  // 3-state sort cycle per column: asc → desc → reset to default
+  const handleSortFinal = (key: string) => {
+    if (userSortKey !== key) {
+      setUserSortKey(key)
+      setUserSortDir('asc')
+      return
+    }
+    if (userSortDir === 'asc') {
+      setUserSortDir('desc')
+      return
+    }
+    // desc or null → reset user override
+    setUserSortKey(null)
+    setUserSortDir(null)
+  }
 
-  // ── Handle page size change — reset to page 1 ──
-  const handlePageSizeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    setPageSize(Number(e.target.value) as PageSizeOption)
+  // ── Effective sort (user overrides default) ──
+  const effectiveSortKey = userSortKey ?? defaultSort?.key ?? null
+  const effectiveSortDir: SortDirection =
+    userSortKey !== null
+      ? ((userSortDir as SortDirection) ?? 'asc')
+      : (defaultSort?.direction ?? 'asc')
+
+  // ── Reset logic ──
+  // Track which things the user has actively changed from the "initial" state
+  const activeFilterCount = Object.values(filterValues).filter((v) => v !== '').length
+  const isSearchActive = search.trim() !== ''
+  const isSortUserOverridden = userSortKey !== null
+
+  // Total count of active modifications (for the reset badge)
+  const modificationCount =
+    (isSearchActive ? 1 : 0) + activeFilterCount + (isSortUserOverridden ? 1 : 0)
+
+  // Show reset button only when user has made modifications
+  const showReset = modificationCount > 0
+
+  const resetAll = () => {
+    setSearch('')
+    setFilterValues(Object.fromEntries(filters.map((f) => [String(f.key), ''])))
+    setUserSortKey(null)
+    setUserSortDir(null)
     setPage(1)
-  }, [])
+  }
 
+  // ── Filtered + Sorted data ──
   const filtered = useMemo(() => {
     let result = [...data]
 
-    // search
     if (search.trim() && searchFields.length > 0) {
       const q = search.toLowerCase()
       result = result.filter((row) =>
@@ -159,27 +204,30 @@ export function DataTable<T extends object>({
       )
     }
 
-    // filters
     filters.forEach((f) => {
       const val = filterValues[String(f.key)]
       if (val)
         result = result.filter((row) => String(getNestedValue(row, String(f.key)) ?? '') === val)
     })
 
-    // sort
-    if (sortKey) {
+    if (effectiveSortKey) {
       result.sort((a, b) => {
-        const av = getNestedValue(a, sortKey)
-        const bv = getNestedValue(b, sortKey)
+        const av = getNestedValue(a, effectiveSortKey)
+        const bv = getNestedValue(b, effectiveSortKey)
         let cmp = 0
-        if (typeof av === 'number' && typeof bv === 'number') cmp = av - bv
-        else cmp = String(av ?? '').localeCompare(String(bv ?? ''))
-        return sortDir === 'asc' ? cmp : -cmp
+        if (typeof av === 'number' && typeof bv === 'number') {
+          cmp = av - bv
+        } else if (av instanceof Date && bv instanceof Date) {
+          cmp = av.getTime() - bv.getTime()
+        } else {
+          cmp = String(av ?? '').localeCompare(String(bv ?? ''))
+        }
+        return effectiveSortDir === 'asc' ? cmp : -cmp
       })
     }
 
     return result
-  }, [data, search, searchFields, filterValues, filters, sortKey, sortDir])
+  }, [data, search, searchFields, filterValues, filters, effectiveSortKey, effectiveSortDir])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const safePage = Math.min(page, totalPages)
@@ -211,15 +259,7 @@ export function DataTable<T extends object>({
     setSelectedKeys(new Set())
   }
 
-  function resetFilters() {
-    setSearch('')
-    setFilterValues(Object.fromEntries(filters.map((f) => [String(f.key), ''])))
-    setPage(1)
-  }
-
-  const hasActiveFilters = search.trim() !== '' || Object.values(filterValues).some((v) => v !== '')
-
-  // ── Pagination pages ──
+  // ── Pagination ──
   const pageNums = Array.from({ length: totalPages }, (_, i) => i + 1)
     .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
     .reduce<(number | '...')[]>((acc, p, idx, arr) => {
@@ -234,6 +274,20 @@ export function DataTable<T extends object>({
     }, [])
 
   const alignClass = { left: 'text-left', center: 'text-center', right: 'text-right' }
+
+  // ── Column sort state helpers ──
+  const getColumnSortState = (
+    colKey: string
+  ): { isActive: boolean; dir: SortState; isDefault: boolean } => {
+    if (userSortKey === colKey) {
+      return { isActive: true, dir: userSortDir, isDefault: false }
+    }
+    if (userSortKey === null && defaultSort?.key === colKey) {
+      // Active via default, but user hasn't touched it
+      return { isActive: true, dir: defaultSort.direction, isDefault: true }
+    }
+    return { isActive: false, dir: null, isDefault: false }
+  }
 
   return (
     <div className="flex flex-col gap-0 rounded-xl border border-border bg-card shadow-sm overflow-hidden">
@@ -317,18 +371,22 @@ export function DataTable<T extends object>({
           </div>
         ))}
 
-        {/* Reset */}
-        {hasActiveFilters && (
+        {/* Reset button — only appears when user has made modifications */}
+        {showReset && (
           <button
-            onClick={resetFilters}
-            title="Reset filter"
-            className="p-2 rounded-lg border border-input text-muted-foreground hover:text-foreground hover:border-border transition-colors"
+            onClick={resetAll}
+            title="Reset semua filter & urutan"
+            className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg border border-input text-muted-foreground hover:text-foreground hover:border-border transition-colors text-sm"
           >
             <IconRefresh size={14} />
+            <span className="hidden sm:inline">Reset</span>
+            {/* Badge counter */}
+            <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold leading-none">
+              {modificationCount}
+            </span>
           </button>
         )}
 
-        {/* Spacer */}
         <div className="flex-1" />
 
         {/* Bulk delete */}
@@ -342,9 +400,9 @@ export function DataTable<T extends object>({
           </button>
         )}
 
-        {/* Extra toolbar */}
         {toolbarExtra}
       </div>
+
       {/* ── Table ── */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -363,24 +421,40 @@ export function DataTable<T extends object>({
                   />
                 </th>
               )}
-              {columns.map((col) => (
-                <th
-                  key={String(col.key)}
-                  className={`px-4 py-3 font-semibold text-muted-foreground text-xs tracking-wide uppercase ${alignClass[col.align ?? 'left']} ${col.width ?? ''}`}
-                >
-                  {col.sortable ? (
-                    <button
-                      onClick={() => handleSort(String(col.key))}
-                      className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-                    >
-                      {col.header}
-                      <SortIcon active={sortKey === String(col.key)} dir={sortDir} />
-                    </button>
-                  ) : (
-                    col.header
-                  )}
-                </th>
-              ))}
+              {columns.map((col) => {
+                const { isActive, dir, isDefault } = getColumnSortState(String(col.key))
+                return (
+                  <th
+                    key={String(col.key)}
+                    className={`px-4 py-3 font-semibold text-muted-foreground text-xs tracking-wide uppercase ${alignClass[col.align ?? 'left']} ${col.width ?? ''}`}
+                  >
+                    {col.sortable ? (
+                      <button
+                        onClick={() => handleSortFinal(String(col.key))}
+                        className={`inline-flex items-center gap-1 transition-colors ${
+                          isActive && !isDefault ? 'text-primary' : 'hover:text-foreground'
+                        }`}
+                        title={
+                          isActive && !isDefault
+                            ? dir === 'asc'
+                              ? 'Klik untuk urutan Z–A'
+                              : 'Klik untuk reset urutan'
+                            : 'Klik untuk urutan A–Z'
+                        }
+                      >
+                        {col.header}
+                        <SortIcon
+                          active={isActive}
+                          dir={isDefault ? defaultSort!.direction : dir}
+                          isDefault={isDefault}
+                        />
+                      </button>
+                    ) : (
+                      col.header
+                    )}
+                  </th>
+                )
+              })}
             </tr>
           </thead>
           <tbody>
@@ -392,9 +466,9 @@ export function DataTable<T extends object>({
                 >
                   <IconFilter size={36} className="mx-auto mb-3 opacity-25" />
                   <p className="font-medium text-sm">{emptyMessage}</p>
-                  {hasActiveFilters && (
+                  {showReset && (
                     <button
-                      onClick={resetFilters}
+                      onClick={resetAll}
                       className="mt-2 text-xs text-primary underline underline-offset-2"
                     >
                       Reset filter
@@ -449,11 +523,10 @@ export function DataTable<T extends object>({
 
       {/* ── Footer / Pagination ── */}
       <div className="flex items-center justify-between px-5 py-3 border-t border-border bg-card text-sm flex-wrap gap-4">
-        {/* LEFT SIDE */}
         <div className="flex items-center gap-6 text-muted-foreground">
           {/* Rows per page */}
           <div className="flex items-center gap-2">
-            <span className="whitespace-nowrap text-muted-foreground">Baris per halaman:</span>{' '}
+            <span className="whitespace-nowrap text-muted-foreground">Baris per halaman:</span>
             <Select
               value={String(pageSize)}
               onValueChange={(val) => {
@@ -464,7 +537,6 @@ export function DataTable<T extends object>({
               <SelectTrigger className="h-9 w-[110px] bg-background border border-border rounded-lg text-sm">
                 <SelectValue placeholder="Rows" />
               </SelectTrigger>
-
               <SelectContent
                 align="start"
                 side="bottom"
@@ -472,33 +544,27 @@ export function DataTable<T extends object>({
               >
                 {pageSizeOptions.map((size) => (
                   <SelectItem key={size} value={String(size)} className="cursor-pointer">
-                    <span className="text-foreground semibold">{size}</span>
+                    <span className="text-foreground font-semibold">{size}</span>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          {/* Range Info */}
+          {/* Range info */}
           <span className="whitespace-nowrap text-sm">
             <span className="text-muted-foreground">Menampilkan </span>
-
             <span className="text-foreground font-semibold">
               {filtered.length === 0
                 ? '0'
-                : `${(safePage - 1) * pageSize + 1}–${Math.min(
-                    safePage * pageSize,
-                    filtered.length
-                  )}`}
+                : `${(safePage - 1) * pageSize + 1}–${Math.min(safePage * pageSize, filtered.length)}`}
             </span>
-
             <span className="text-muted-foreground"> dari </span>
-
             <span className="text-foreground font-semibold">{filtered.length}</span>
           </span>
         </div>
 
-        {/* RIGHT SIDE PAGINATION */}
+        {/* Pagination */}
         <div className="flex items-center gap-1">
           <button
             disabled={safePage <= 1}
