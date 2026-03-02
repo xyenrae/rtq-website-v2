@@ -171,3 +171,175 @@ export async function uploadGambar(file: File): Promise<string> {
 
   return urlData.publicUrl
 }
+
+// ─── Storage Helpers ────────────────────────────────────────────────────────
+
+/**
+ * Ekstrak filename dari public URL Supabase Storage
+ * Contoh: https://.../berita-images/123-abc.jpg → "123-abc.jpg"
+ */
+export function extractFilenameFromUrl(url: string): string | null {
+  try {
+    const urlObj = new URL(url)
+    const pathSegments = urlObj.pathname.split('/').filter(Boolean)
+    // Ambil segment terakhir (filename)
+    return pathSegments[pathSegments.length - 1] || null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Hapus file dari Supabase Storage bucket "berita-images"
+ */
+export async function deleteImageFromStorage(url: string): Promise<boolean> {
+  if (!url) return false
+
+  const filename = extractFilenameFromUrl(url)
+  if (!filename) return false
+
+  const supabase = getClient()
+  const { error } = await supabase.storage.from('berita-images').remove([filename])
+
+  return !error
+}
+
+/**
+ * Upload gambar dengan opsi hapus file lama
+ */
+export async function uploadGambarWithCleanup(
+  file: File,
+  oldImageUrl?: string | null
+): Promise<string> {
+  // Hapus image lama jika ada
+  if (oldImageUrl) {
+    await deleteImageFromStorage(oldImageUrl).catch((err) => {
+      console.warn('Gagal menghapus image lama:', err)
+      // Lanjutkan upload meski hapus gagal
+    })
+  }
+
+  return uploadGambar(file) // pakai fungsi upload yang sudah ada
+}
+
+export async function updateBeritaWithImage(
+  id: string,
+  payload: Partial<{
+    judul: string
+    slug: string
+    konten: string
+    ringkasan: string
+    gambar: string | null
+    waktu_baca: number
+    status: Status
+    kategori_id: string
+    tanggal_diterbitkan: string
+  }>,
+  newImageFile?: File | null, // File baru jika ada upload
+  oldImageUrl?: string | null // URL image lama untuk dihapus
+): Promise<Berita> {
+  const supabase = getClient()
+
+  let finalGambarUrl = payload.gambar ?? null
+
+  // Handle upload gambar baru
+  if (newImageFile) {
+    try {
+      finalGambarUrl = await uploadGambar(newImageFile)
+
+      // Hapus image lama setelah upload sukses
+      if (oldImageUrl) {
+        await deleteImageFromStorage(oldImageUrl).catch((err) => {
+          console.warn('Gagal menghapus image lama:', err)
+        })
+      }
+    } catch (uploadError) {
+      console.error('Upload gambar gagal:', uploadError)
+      throw uploadError
+    }
+  }
+  // Handle penghapusan gambar (jika payload.gambar === null dan tidak ada file baru)
+  else if (payload.gambar === null && oldImageUrl) {
+    await deleteImageFromStorage(oldImageUrl).catch((err) => {
+      console.warn('Gagal menghapus image saat remove:', err)
+    })
+  }
+
+  // Update database
+  const { data, error } = await supabase
+    .from('berita')
+    .update({
+      ...payload,
+      gambar: finalGambarUrl,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .select(
+      `
+      *,
+      berita_kategori (
+        id,
+        nama
+      )
+    `
+    )
+    .single()
+
+  if (error) throw error
+  return data as Berita
+}
+
+export async function deleteBeritaWithCleanup(id: string): Promise<void> {
+  const supabase = getClient()
+
+  // 1. Ambil data berita dulu untuk mendapatkan URL gambar
+  const { data: berita, error: fetchError } = await supabase
+    .from('berita')
+    .select('gambar')
+    .eq('id', id)
+    .single()
+
+  if (fetchError) throw fetchError
+
+  // 2. Hapus dari database
+  const { error: deleteError } = await supabase.from('berita').delete().eq('id', id)
+
+  if (deleteError) throw deleteError
+
+  // 3. Hapus gambar dari storage (setelah DB sukses)
+  if (berita?.gambar) {
+    await deleteImageFromStorage(berita.gambar).catch((err) => {
+      console.warn('Gagal menghapus gambar dari storage:', err)
+      // Tidak throw error agar delete DB tetap sukses
+    })
+  }
+}
+
+// Untuk bulk delete
+export async function deleteBulkBeritaWithCleanup(ids: string[]): Promise<void> {
+  const supabase = getClient()
+
+  // Ambil semua URL gambar yang akan dihapus
+  const { data: beritaList, error: fetchError } = await supabase
+    .from('berita')
+    .select('gambar')
+    .in('id', ids)
+
+  if (fetchError) throw fetchError
+
+  // Hapus dari database
+  const { error: deleteError } = await supabase.from('berita').delete().in('id', ids)
+
+  if (deleteError) throw deleteError
+
+  // Hapus semua gambar dari storage
+  if (beritaList) {
+    for (const berita of beritaList) {
+      if (berita?.gambar) {
+        await deleteImageFromStorage(berita.gambar).catch((err) => {
+          console.warn('Gagal menghapus gambar dari storage:', err)
+        })
+      }
+    }
+  }
+}

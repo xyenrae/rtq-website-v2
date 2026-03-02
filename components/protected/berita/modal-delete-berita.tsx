@@ -15,7 +15,7 @@ import {
   CheckCircle2,
 } from 'lucide-react'
 import { useState } from 'react'
-import { deleteBerita, type Berita } from '@/lib/berita'
+import { deleteBerita, deleteBeritaWithCleanup, type Berita } from '@/lib/berita'
 import { toast } from 'sonner'
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
@@ -57,7 +57,7 @@ export function ModalDeleteBerita({ open, onClose, berita, onDeleted }: ModalDel
   const handleDelete = async () => {
     setDeleting(true)
     try {
-      await deleteBerita(berita.id)
+      await deleteBeritaWithCleanup(berita.id)
       onDeleted(berita.id)
       toast.success('Berita berhasil dihapus', {
         description: `"${berita.judul}" telah dihapus secara permanen.`,

@@ -31,7 +31,7 @@ import {
   Save,
 } from 'lucide-react'
 import {
-  updateBerita,
+  updateBeritaWithImage,
   uploadGambar,
   type BeritaKategori,
   type Berita,
@@ -1020,27 +1020,26 @@ export function ModalEditBerita({
     setSaveError(null)
 
     try {
-      // Upload gambar baru jika ada file yang dipilih
-      let gambarUrl: string | null = form.thumbnail || null
-      if (form.thumbnailFile) {
-        gambarUrl = await uploadGambar(form.thumbnailFile)
-      }
-
       const waktuBaca = estimateReadTime(form.konten)
-
-      const result = await updateBerita(berita.id, {
-        judul: form.judul.trim(),
-        slug: form.slug.trim() || generateSlug(form.judul),
-        konten: form.konten.trim(),
-        ringkasan: form.ringkasan.trim(),
-        gambar: gambarUrl,
-        waktu_baca: waktuBaca,
-        status: form.status,
-        kategori_id: kategoriObj.id,
-        ...(form.tanggalDiterbitkan
-          ? { tanggal_diterbitkan: new Date(form.tanggalDiterbitkan).toISOString() }
-          : {}),
-      })
+      
+      const result = await updateBeritaWithImage(
+        berita.id,
+        {
+          judul: form.judul.trim(),
+          slug: form.slug.trim() || generateSlug(form.judul),
+          konten: form.konten.trim(),
+          ringkasan: form.ringkasan.trim(),
+          gambar: form.thumbnailFile ? null : form.thumbnail || null,
+          waktu_baca: waktuBaca,
+          status: form.status,
+          kategori_id: kategoriObj.id,
+          ...(form.tanggalDiterbitkan
+            ? { tanggal_diterbitkan: new Date(form.tanggalDiterbitkan).toISOString() }
+            : {}),
+        },
+        form.thumbnailFile,
+        originalForm.thumbnail
+      )
 
       onUpdate(result)
       toast.success('Berita berhasil diperbarui', {
