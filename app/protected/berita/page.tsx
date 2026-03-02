@@ -66,7 +66,7 @@ function StatCard({
   )
 }
 
-// ─── Dynamic Category Colors ──────────────────────────────────────────────────
+// ─── Category Colors ──────────────────────────────────────────────────────────
 
 const DYNAMIC_COLORS = [
   { text: 'text-blue-600 dark:text-blue-400', dot: 'bg-blue-600 dark:bg-blue-400' },
@@ -87,7 +87,7 @@ function getCategoryStyle(name: string) {
   return DYNAMIC_COLORS[Math.abs(hash) % DYNAMIC_COLORS.length]
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function BeritaPage() {
   const [data, setData] = useState<Berita[]>([])
@@ -96,11 +96,10 @@ export default function BeritaPage() {
   const [error, setError] = useState<string | null>(null)
 
   const [modalOpen, setModalOpen] = useState(false)
-  const [editData, setEditData] = useState<Berita | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  // ── Data loading ───────────────────────────────────────────────────────────
+  // ── Load data ──────────────────────────────────────────────────────────────
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -120,7 +119,7 @@ export default function BeritaPage() {
     loadData()
   }, [loadData])
 
-  // ── Derived stats ──────────────────────────────────────────────────────────
+  // ── Stats ──────────────────────────────────────────────────────────────────
 
   const totalViews = data.reduce((a, b) => a + b.views, 0)
   const publishedCount = data.filter((b) => b.status === 'published').length
@@ -149,37 +148,19 @@ export default function BeritaPage() {
     }
   }
 
+  /** Dipanggil oleh modal setelah insert sukses — tambahkan ke list tanpa refetch */
   function handleSave(berita: Berita) {
-    setData((d) => {
-      const exists = d.find((b) => b.id === berita.id)
-      if (exists) return d.map((b) => (b.id === berita.id ? berita : b))
-      return [berita, ...d]
-    })
+    setData((d) => [berita, ...d])
   }
 
-  function handleEdit(row: Berita) {
-    setEditData(row)
-    setModalOpen(true)
-  }
-
-  function handleOpenAdd() {
-    setEditData(null)
-    setModalOpen(true)
-  }
-
-  // ── Kategori filter options (dynamic from DB) ──────────────────────────────
+  // ── Dynamic filter options ─────────────────────────────────────────────────
 
   const tableFilters: DataTableFilter<Berita>[] = [
     {
-      key: 'berita_kategori',
+      key: 'kategori_id',
       label: 'Kategori',
-      options: kategoris.map((k) => ({
-        label: k.nama,
-        value: k.id,
-      })),
-      // custom filter: match by nested kategori_id
-      filterFn: (row, value) => row.kategori_id === value,
-    } as DataTableFilter<Berita>,
+      options: kategoris.map((k) => ({ label: k.nama, value: k.id })),
+    },
     {
       key: 'status',
       label: 'Status',
@@ -266,7 +247,9 @@ export default function BeritaPage() {
           }`}
         >
           <span
-            className={`w-1.5 h-1.5 rounded-full ${row.status === 'published' ? 'bg-emerald-500' : 'bg-muted-foreground'}`}
+            className={`w-1.5 h-1.5 rounded-full ${
+              row.status === 'published' ? 'bg-emerald-500' : 'bg-muted-foreground'
+            }`}
           />
           {row.status === 'published' ? 'Published' : 'Draft'}
         </span>
@@ -281,8 +264,8 @@ export default function BeritaPage() {
           className="flex items-center justify-center gap-1.5"
           onClick={(e) => e.stopPropagation()}
         >
+          {/* Edit — bisa dikembangkan dengan ModalEditBerita */}
           <button
-            onClick={() => handleEdit(row)}
             className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"
             title="Edit"
           >
@@ -348,7 +331,7 @@ export default function BeritaPage() {
             Refresh
           </button>
           <button
-            onClick={handleOpenAdd}
+            onClick={() => setModalOpen(true)}
             className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity shadow-sm"
           >
             <IconPlus size={17} />
@@ -359,7 +342,7 @@ export default function BeritaPage() {
 
       <hr className="my-4" />
 
-      {/* Error state */}
+      {/* Error */}
       {error && (
         <div className="mb-6 flex items-center gap-3 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl px-4 py-3">
           <IconAlertCircle size={18} className="shrink-0" />
@@ -434,15 +417,11 @@ export default function BeritaPage() {
         />
       )}
 
-      {/* Modal */}
+      {/* Modal — kategoris di-pass dari state page, tidak di-fetch ulang di dalam modal */}
       <ModalTambahBerita
         open={modalOpen}
-        onClose={() => {
-          setModalOpen(false)
-          setEditData(null)
-        }}
+        onClose={() => setModalOpen(false)}
         onSave={handleSave}
-        editData={editData}
         kategoris={kategoris}
       />
     </div>

@@ -37,7 +37,7 @@ export interface BeritaInsert {
   kategori_id: string
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Client ───────────────────────────────────────────────────────────────────
 
 function getClient() {
   return createClient()
@@ -99,4 +99,28 @@ export async function deleteBulkBerita(ids: string[]): Promise<void> {
   const supabase = getClient()
   const { error } = await supabase.from('berita').delete().in('id', ids)
   if (error) throw error
+}
+
+// ─── Storage ──────────────────────────────────────────────────────────────────
+
+/**
+ * Upload file gambar ke Supabase Storage bucket "berita-images".
+ * Buat bucket di Supabase Dashboard → Storage → New Bucket
+ * Nama: "berita-images", centang "Public bucket".
+ */
+export async function uploadGambar(file: File): Promise<string> {
+  const supabase = getClient()
+
+  const ext = file.name.split('.').pop() ?? 'jpg'
+  const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+  const path = `thumbnails/${filename}`
+
+  const { error } = await supabase.storage
+    .from('berita-images')
+    .upload(path, file, { cacheControl: '3600', upsert: false })
+
+  if (error) throw error
+
+  const { data } = supabase.storage.from('berita-images').getPublicUrl(path)
+  return data.publicUrl
 }

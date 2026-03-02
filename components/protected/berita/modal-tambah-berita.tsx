@@ -29,6 +29,13 @@ import {
   Unlock,
   Trash2,
 } from 'lucide-react'
+import {
+  insertBerita,
+  uploadGambar,
+  type BeritaKategori,
+  type Berita,
+  type Status,
+} from '@/lib/berita'
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
 
@@ -36,35 +43,10 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Local types untuk form (pakai nama kategori, bukan UUID) ─────────────────
 
-export type Kategori = 'Pendidikan' | 'Kegiatan' | 'Pengumuman' | 'Artikel'
-export type Status = 'published' | 'draft'
-
-export interface Berita {
-  id: number
-  judul: string
-  slug: string
-  kategori: Kategori
-  konten: string
-  ringkasan: string
-  thumbnail: string | null
-  waktuBaca: number
-  status: Status
-  tanggalDibuat: string
-  tanggalDiterbitkan: string | null
-  views: number
-  featured: boolean
-}
-
-// ─── Kategori List ────────────────────────────────────────────────────────────
-
-const kategoriList: { value: Kategori; icon: React.ReactNode }[] = [
-  { value: 'Pendidikan', icon: <BookOpen className="h-4 w-4" /> },
-  { value: 'Kegiatan', icon: <Calendar className="h-4 w-4" /> },
-  { value: 'Pengumuman', icon: <Megaphone className="h-4 w-4" /> },
-  { value: 'Artikel', icon: <Newspaper className="h-4 w-4" /> },
-]
+// Form tetap pakai nama kategori sebagai display, tapi saat save kita resolve ke UUID
+export type FormKategori = string // nama kategori, e.g. "Pendidikan"
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -148,11 +130,23 @@ interface Step1Props {
   judul: string
   slug: string
   slugLocked: boolean
-  kategori: Kategori
+  kategori: FormKategori
+  kategoriList: BeritaKategori[]
   errors: Partial<Record<string, string>>
   onChange: (field: string, value: string | boolean) => void
   onToggleSlugLock: () => void
   onRegenerateSlug: () => void
+}
+
+const KATEGORI_ICONS: Record<string, React.ReactNode> = {
+  Pendidikan: <BookOpen className="h-4 w-4" />,
+  Kegiatan: <Calendar className="h-4 w-4" />,
+  Pengumuman: <Megaphone className="h-4 w-4" />,
+  Artikel: <Newspaper className="h-4 w-4" />,
+}
+
+function getKategoriIcon(nama: string): React.ReactNode {
+  return KATEGORI_ICONS[nama] ?? <FileText className="h-4 w-4" />
 }
 
 function Step1({
@@ -160,6 +154,7 @@ function Step1({
   slug,
   slugLocked,
   kategori,
+  kategoriList,
   errors,
   onChange,
   onToggleSlugLock,
@@ -245,29 +240,37 @@ function Step1({
         <FieldError message={errors.slug} />
       </div>
 
-      {/* Kategori */}
+      {/* Kategori — render dinamis dari DB */}
       <div>
         <FieldLabel required>Kategori</FieldLabel>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {kategoriList.map(({ value }) => {
-            const active = kategori === value
-            return (
-              <button
-                key={value}
-                type="button"
-                onClick={() => onChange('kategori', value)}
-                className={cn(
-                  'flex items-center justify-center py-3 px-2 rounded-xl border text-sm font-medium transition-all duration-200',
-                  active
-                    ? 'border-primary bg-primary/10 text-primary ring-2 ring-primary/20'
-                    : 'border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground'
-                )}
-              >
-                <span className="text-xs font-semibold">{value}</span>
-              </button>
-            )
-          })}
-        </div>
+        {kategoriList.length === 0 ? (
+          <div className="flex items-center gap-2 py-3 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Memuat kategori...
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {kategoriList.map((k) => {
+              const active = kategori === k.nama
+              return (
+                <button
+                  key={k.id}
+                  type="button"
+                  onClick={() => onChange('kategori', k.nama)}
+                  className={cn(
+                    'flex items-center justify-center py-3 px-2 rounded-xl border text-sm font-medium transition-all duration-200',
+                    active
+                      ? 'border-primary bg-primary/10 text-primary ring-2 ring-primary/20'
+                      : 'border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                  )}
+                >
+                  <span className="text-xs font-semibold">{k.nama}</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+        <FieldError message={errors.kategori} />
       </div>
     </div>
   )
@@ -456,7 +459,7 @@ function Step3({
             <Image className="h-4 w-4 text-muted-foreground ml-3.5 shrink-0" />
             <input
               type="url"
-              placeholder="https://example.com/gambar.jpg  "
+              placeholder="https://example.com/gambar.jpg"
               value={thumbnail}
               onChange={(e) => {
                 onThumbnailUrlChange(e.target.value)
@@ -534,7 +537,7 @@ function Step3({
         )}
       </div>
 
-      {/* Waktu baca info */}
+      {/* Info waktu baca */}
       <div className="flex items-start gap-3 p-4 rounded-xl border border-border bg-muted/30">
         <Clock className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
         <div>
@@ -556,7 +559,7 @@ interface Step4Props {
   tanggalDiterbitkan: string
   judul: string
   slug: string
-  kategori: Kategori
+  kategoriNama: string
   ringkasan: string
   konten: string
   waktuBaca: number
@@ -568,7 +571,7 @@ function Step4({
   tanggalDiterbitkan,
   judul,
   slug,
-  kategori,
+  kategoriNama,
   ringkasan,
   konten,
   waktuBaca,
@@ -646,13 +649,8 @@ function Step4({
         </p>
         <div className="space-y-2">
           <div className="flex items-center gap-2 flex-wrap">
-            <span
-              className={cn(
-                'text-xs font-semibold px-2 py-0.5 rounded-full border',
-                'border-border bg-muted/50 text-foreground'
-              )}
-            >
-              {kategori}
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full border border-border bg-muted/50 text-foreground">
+              {kategoriNama || <span className="text-muted-foreground italic">Belum dipilih</span>}
             </span>
             <span className="flex items-center gap-1 text-xs text-muted-foreground">
               <Clock className="h-3 w-3" />
@@ -688,7 +686,7 @@ function Step4({
   )
 }
 
-// ─── Confirmation Dialog Component (RENDERED OUTSIDE DIALOG) ─────────────────
+// ─── Confirm Dialog ───────────────────────────────────────────────────────────
 
 interface ConfirmDialogProps {
   open: boolean
@@ -712,15 +710,12 @@ function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps) {
   if (!open) return null
-
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 pointer-events-none">
-      {/* Overlay dengan pointer-events agar bisa diklik */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm pointer-events-auto"
         onClick={onCancel}
       />
-      {/* Dialog content dengan pointer-events agar interaktif */}
       <div className="relative z-10 w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl p-5 animate-in fade-in zoom-in-95 duration-200 pointer-events-auto">
         <div className="flex items-start gap-3">
           <div
@@ -742,7 +737,6 @@ function ConfirmDialog({
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{description}</p>
           </div>
         </div>
-
         <div className="flex items-center justify-end gap-2 mt-5 pt-4 border-t border-border">
           <button
             type="button"
@@ -771,17 +765,21 @@ function ConfirmDialog({
 
 // ─── Main Modal ───────────────────────────────────────────────────────────────
 
-interface ModalTambahBeritaProps {
+export interface ModalTambahBeritaProps {
   open: boolean
   onClose: () => void
-  onSave: (b: Omit<Berita, 'id'>) => Promise<void> | void
+  /** Dipanggil setelah berita berhasil disimpan ke Supabase */
+  onSave: (berita: Berita) => void
+  /** Daftar kategori dari DB — fetch di parent dan pass ke sini */
+  kategoris: BeritaKategori[]
 }
 
 type FormData = {
   judul: string
   slug: string
   slugLocked: boolean
-  kategori: Kategori
+  /** Nama kategori (string), resolve ke UUID saat save */
+  kategori: string
   ringkasan: string
   konten: string
   thumbnail: string
@@ -799,17 +797,19 @@ const STEPS = [
   { label: 'Publikasi', fullLabel: 'Pengaturan Publikasi' },
 ]
 
-const defaultForm: FormData = {
-  judul: '',
-  slug: '',
-  slugLocked: true,
-  kategori: 'Pendidikan',
-  ringkasan: '',
-  konten: '',
-  thumbnail: '',
-  thumbnailFile: null,
-  status: 'published',
-  tanggalDiterbitkan: '',
+function makeDefaultForm(kategoris: BeritaKategori[]): FormData {
+  return {
+    judul: '',
+    slug: '',
+    slugLocked: true,
+    kategori: kategoris[0]?.nama ?? '',
+    ringkasan: '',
+    konten: '',
+    thumbnail: '',
+    thumbnailFile: null,
+    status: 'published',
+    tanggalDiterbitkan: '',
+  }
 }
 
 function validateStep(s: number, form: FormData): FormErrors {
@@ -818,6 +818,7 @@ function validateStep(s: number, form: FormData): FormErrors {
     if (!form.judul.trim()) errors.judul = 'Judul tidak boleh kosong'
     else if (form.judul.length < 5) errors.judul = 'Judul minimal 5 karakter'
     if (!form.slug.trim()) errors.slug = 'Slug tidak boleh kosong'
+    if (!form.kategori) errors.kategori = 'Pilih kategori terlebih dahulu'
   }
   if (s === 2) {
     if (!form.ringkasan.trim()) errors.ringkasan = 'Ringkasan tidak boleh kosong'
@@ -836,62 +837,55 @@ function getCompletedSteps(form: FormData): number[] {
   return done
 }
 
-export function ModalTambahBerita({ open, onClose, onSave }: ModalTambahBeritaProps) {
+export function ModalTambahBerita({ open, onClose, onSave, kategoris }: ModalTambahBeritaProps) {
   const [step, setStep] = useState(1)
-  const [form, setForm] = useState<FormData>(defaultForm)
+  const [form, setForm] = useState<FormData>(() => makeDefaultForm(kategoris))
   const [errors, setErrors] = useState<FormErrors>({})
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
-  // State untuk konfirmasi tutup
   const [showCloseConfirm, setShowCloseConfirm] = useState(false)
   const [pendingCloseAction, setPendingCloseAction] = useState<(() => void) | null>(null)
 
-  // Close handler dengan opsi reset data
+  // Reset form saat modal dibuka
+  useEffect(() => {
+    if (open) {
+      setStep(1)
+      setForm(makeDefaultForm(kategoris))
+      setErrors({})
+      setSaveError(null)
+    }
+  }, [open, kategoris])
+
+  const hasUnsavedData = !!(
+    form.judul ||
+    form.konten ||
+    form.ringkasan ||
+    form.thumbnail ||
+    form.thumbnailFile
+  )
+
   const handleClose = (resetData = true) => {
     if (resetData) {
       setStep(1)
-      setForm(defaultForm)
+      setForm(makeDefaultForm(kategoris))
       setErrors({})
+      setSaveError(null)
     }
     onClose()
   }
 
-  // Handler untuk klik overlay / ESC - tutup tapi JANGAN reset data
-  const handleOverlayClose = () => {
-    onClose()
-  }
-
-  // Cek apakah ada data yang sudah diisi
-  const hasUnsavedData =
-    form.judul || form.konten || form.ringkasan || form.thumbnail || form.thumbnailFile
-  // Request close dengan konfirmasi jika ada data
   const requestClose = (resetData: boolean, source: 'overlay' | 'button' | 'save') => {
     if (source === 'save') {
-      // Langsung tutup tanpa konfirmasi untuk aksi simpan
-      handleClose(resetData)
+      handleClose(true)
       return
     }
-
-    if (hasUnsavedData && (source === 'button' || source === 'overlay')) {
-      // Simpan aksi yang akan dilakukan setelah konfirmasi
+    if (hasUnsavedData) {
       setPendingCloseAction(() => () => handleClose(true))
       setShowCloseConfirm(true)
     } else {
-      // Tidak ada data atau sumber overlay → langsung tutup
       handleClose(resetData)
     }
-  }
-
-  // Handler untuk tombol Batal / X di header
-  const handleCancelButton = () => {
-    // Batal = reset data + tutup
-    requestClose(true, 'button')
-  }
-
-  // Handler untuk overlay / ESC
-  const handleOverlayCloseButton = () => {
-    // Overlay = tutup saja, data tetap
-    requestClose(false, 'overlay')
   }
 
   const handleChange = (field: string, value: string | boolean | number | File | null) => {
@@ -926,7 +920,10 @@ export function ModalTambahBerita({ open, onClose, onSave }: ModalTambahBeritaPr
   const nextStep = () => navigateTo(step + 1)
   const prevStep = () => navigateTo(step - 1)
 
+  // ── Save ke Supabase ────────────────────────────────────────────────────────
+
   const handleSave = async () => {
+    // Validasi step 1 & 2
     for (let s = 1; s <= 2; s++) {
       const errs = validateStep(s, form)
       if (Object.keys(errs).length) {
@@ -935,25 +932,43 @@ export function ModalTambahBerita({ open, onClose, onSave }: ModalTambahBeritaPr
         return
       }
     }
+
+    // Resolve kategori nama → UUID
+    const kategoriObj = kategoris.find((k) => k.nama === form.kategori)
+    if (!kategoriObj) {
+      setErrors({ kategori: 'Kategori tidak valid' })
+      setStep(1)
+      return
+    }
+
     setSaving(true)
+    setSaveError(null)
+
     try {
+      // Upload gambar ke Supabase Storage jika ada file
+      let gambarUrl: string | null = form.thumbnail || null
+      if (form.thumbnailFile) {
+        gambarUrl = await uploadGambar(form.thumbnailFile)
+      }
+
       const waktuBaca = estimateReadTime(form.konten)
-      await onSave({
-        judul: form.judul,
-        slug: form.slug,
-        kategori: form.kategori,
-        konten: form.konten,
-        ringkasan: form.ringkasan,
-        thumbnail: form.thumbnail || null,
-        waktuBaca,
+
+      const result = await insertBerita({
+        judul: form.judul.trim(),
+        slug: form.slug.trim() || generateSlug(form.judul),
+        konten: form.konten.trim(),
+        ringkasan: form.ringkasan.trim(),
+        gambar: gambarUrl,
+        waktu_baca: waktuBaca,
         status: form.status,
-        tanggalDibuat: new Date().toISOString().split('T')[0],
-        tanggalDiterbitkan: form.tanggalDiterbitkan || null,
+        kategori_id: kategoriObj.id,
         views: 0,
-        featured: false,
       })
-      // Simpan sukses → reset data + tutup tanpa konfirmasi
+
+      onSave(result)
       requestClose(true, 'save')
+    } catch (e: unknown) {
+      setSaveError(e instanceof Error ? e.message : 'Gagal menyimpan berita. Coba lagi.')
     } finally {
       setSaving(false)
     }
@@ -966,24 +981,19 @@ export function ModalTambahBerita({ open, onClose, onSave }: ModalTambahBeritaPr
       <DialogPrimitive.Root
         open={open}
         onOpenChange={(isOpen) => {
-          // Jika modal ditutup via overlay/ESC (bukan via tombol)
-          if (!isOpen && open) {
-            handleOverlayCloseButton()
-          }
+          if (!isOpen && open) requestClose(false, 'overlay')
         }}
       >
         <DialogPrimitive.Portal>
           <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 duration-200" />
           <DialogPrimitive.Content
             onInteractOutside={(e) => {
-              // Prevent default close behavior, handle manually
               e.preventDefault()
-              handleOverlayCloseButton()
+              requestClose(false, 'overlay')
             }}
             onEscapeKeyDown={(e) => {
-              // Optional: handle ESC key same as overlay
               e.preventDefault()
-              handleOverlayCloseButton()
+              requestClose(false, 'button')
             }}
             className={cn(
               'fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%]',
@@ -997,7 +1007,7 @@ export function ModalTambahBerita({ open, onClose, onSave }: ModalTambahBeritaPr
               'duration-200'
             )}
           >
-            {/* ── Header ── */}
+            {/* Header */}
             <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-border shrink-0">
               <div>
                 <DialogPrimitive.Title className="text-base font-bold text-foreground">
@@ -1005,11 +1015,9 @@ export function ModalTambahBerita({ open, onClose, onSave }: ModalTambahBeritaPr
                 </DialogPrimitive.Title>
                 <p className="text-xs text-muted-foreground mt-0.5">{STEPS[step - 1].fullLabel}</p>
               </div>
-
-              {/* Tombol X: Hanya muncul di Step 2+ */}
               {step >= 2 && (
                 <DialogPrimitive.Close
-                  onClick={handleCancelButton}
+                  onClick={() => requestClose(true, 'button')}
                   className="rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors p-1.5"
                   title="Tutup (data akan hilang)"
                 >
@@ -1019,7 +1027,7 @@ export function ModalTambahBerita({ open, onClose, onSave }: ModalTambahBeritaPr
               )}
             </div>
 
-            {/* ── Step Navigator ── */}
+            {/* Step Navigator */}
             <div className="px-6 pt-4 pb-2 shrink-0">
               <div className="flex items-start">
                 {STEPS.map((s, i) => {
@@ -1036,9 +1044,8 @@ export function ModalTambahBerita({ open, onClose, onSave }: ModalTambahBeritaPr
                         disabled={!isReachable}
                         onClick={() => isReachable && navigateTo(num)}
                         className={cn(
-                          'flex flex-col items-center gap-1.5 group transition-all duration-200 select-none',
-                          isReachable ? 'cursor-pointer' : 'cursor-default',
-                          'flex-none'
+                          'flex flex-col items-center gap-1.5 group transition-all duration-200 select-none flex-none',
+                          isReachable ? 'cursor-pointer' : 'cursor-default'
                         )}
                       >
                         <div
@@ -1068,7 +1075,6 @@ export function ModalTambahBerita({ open, onClose, onSave }: ModalTambahBeritaPr
                           {s.label}
                         </span>
                       </button>
-
                       {!isLast && (
                         <div className="flex-1 h-0.5 mx-2 mt-4 rounded-full overflow-hidden bg-border">
                           <div
@@ -1083,14 +1089,23 @@ export function ModalTambahBerita({ open, onClose, onSave }: ModalTambahBeritaPr
               </div>
             </div>
 
-            {/* ── Body ── */}
+            {/* Body */}
             <div className="flex-1 overflow-y-auto px-6 py-5 min-h-0">
+              {/* Save error banner */}
+              {saveError && (
+                <div className="flex items-center gap-2 mb-4 px-4 py-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  {saveError}
+                </div>
+              )}
+
               {step === 1 && (
                 <Step1
                   judul={form.judul}
                   slug={form.slug}
                   slugLocked={form.slugLocked}
                   kategori={form.kategori}
+                  kategoriList={kategoris}
                   errors={errors}
                   onChange={handleChange}
                   onToggleSlugLock={() => setForm((f) => ({ ...f, slugLocked: !f.slugLocked }))}
@@ -1120,7 +1135,7 @@ export function ModalTambahBerita({ open, onClose, onSave }: ModalTambahBeritaPr
                   tanggalDiterbitkan={form.tanggalDiterbitkan}
                   judul={form.judul}
                   slug={form.slug}
-                  kategori={form.kategori}
+                  kategoriNama={form.kategori}
                   ringkasan={form.ringkasan}
                   konten={form.konten}
                   waktuBaca={estimateReadTime(form.konten)}
@@ -1129,13 +1144,14 @@ export function ModalTambahBerita({ open, onClose, onSave }: ModalTambahBeritaPr
               )}
             </div>
 
-            {/* ── Footer ── */}
+            {/* Footer */}
             <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-border shrink-0 bg-muted/20">
               <button
                 type="button"
-                onClick={step === 1 ? handleCancelButton : prevStep}
+                onClick={step === 1 ? () => requestClose(true, 'button') : prevStep}
+                disabled={saving}
                 className={cn(
-                  'flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border text-sm font-medium transition-colors',
+                  'flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border text-sm font-medium transition-colors disabled:opacity-50',
                   hasUnsavedData && step === 1
                     ? 'text-destructive hover:bg-destructive/10 border-destructive/30'
                     : 'text-foreground hover:bg-muted'
@@ -1157,7 +1173,8 @@ export function ModalTambahBerita({ open, onClose, onSave }: ModalTambahBeritaPr
                 <button
                   type="button"
                   onClick={nextStep}
-                  className="px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity"
+                  disabled={saving}
+                  className="px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
                   Selanjutnya →
                 </button>
@@ -1186,7 +1203,7 @@ export function ModalTambahBerita({ open, onClose, onSave }: ModalTambahBeritaPr
         </DialogPrimitive.Portal>
       </DialogPrimitive.Root>
 
-      {/* Confirmation Dialog for Close - RENDERED OUTSIDE Dialog */}
+      {/* Confirm Dialog */}
       <ConfirmDialog
         open={showCloseConfirm}
         title={step === 1 ? 'Batal Mengisi Formulir?' : 'Tutup Tanpa Menyimpan?'}
@@ -1207,46 +1224,5 @@ export function ModalTambahBerita({ open, onClose, onSave }: ModalTambahBeritaPr
         }}
       />
     </>
-  )
-}
-
-// ─── Demo ─────────────────────────────────────────────────────────────────────
-
-export default function Demo() {
-  const [open, setOpen] = useState(false)
-
-  const handleSave = async (berita: Omit<Berita, 'id'>) => {
-    await new Promise((r) => setTimeout(r, 1200))
-    console.log('Berita disimpan:', berita)
-    alert(
-      `✓ Berita berhasil disimpan!\n\nJudul: ${berita.judul}\nSlug: /berita/${berita.slug}\nWaktu baca: ~${berita.waktuBaca} menit`
-    )
-  }
-
-  return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-8">
-      <div className="text-center space-y-4">
-        <h1 className="text-2xl font-bold text-foreground">Demo Modal Tambah Berita</h1>
-        <p className="text-sm text-muted-foreground">
-          Klik tombol di bawah untuk membuka modal
-          <br />
-          <span className="text-xs text-muted-foreground/70">
-            • Step 1: Tombol X tersembunyi, hanya ada "Batal"
-            <br />
-            • Step 2+: Tombol X muncul di pojok kanan atas
-            <br />
-            • Klik luar modal: tutup tapi data tetap
-            <br />• Klik Batal/X: konfirmasi → Ya = reset data
-          </span>
-        </p>
-        <button
-          onClick={() => setOpen(true)}
-          className="px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity"
-        >
-          + Tambah Berita Baru
-        </button>
-      </div>
-      <ModalTambahBerita open={open} onClose={() => setOpen(false)} onSave={handleSave} />
-    </div>
   )
 }
