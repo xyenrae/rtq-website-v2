@@ -19,6 +19,7 @@ import {
 import { DataTable, type ColumnDef, type DataTableFilter } from '@/components/data-table'
 import { ModalTambahBerita } from '@/components/protected/berita/modal-tambah-berita'
 import { ModalEditBerita } from '@/components/protected/berita/modal-edit-berita'
+import { ModalDeleteBerita } from '@/components/protected/berita/modal-delete-berita'
 import {
   fetchBerita,
   fetchKategori,
@@ -100,9 +101,14 @@ export default function BeritaPage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [editBerita, setEditBerita] = useState<Berita | null>(null)
+  const [deleteBeritaTarget, setDeleteBeritaTarget] = useState<Berita | null>(null)
 
   function handleUpdate(updated: Berita) {
     setData((d) => d.map((b) => (b.id === updated.id ? updated : b)))
+  }
+
+  function handleDeleted(id: string) {
+    setData((d) => d.filter((b) => b.id !== id))
   }
 
   // ── Load data ──────────────────────────────────────────────────────────────
@@ -299,7 +305,7 @@ export default function BeritaPage() {
             </div>
           ) : (
             <button
-              onClick={() => setConfirmDeleteId(row.id)}
+              onClick={() => setDeleteBeritaTarget(row)}
               className="p-1.5 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
               title="Hapus"
             >
@@ -439,6 +445,15 @@ export default function BeritaPage() {
           onUpdate={handleUpdate}
           berita={editBerita}
           kategoris={kategoris}
+        />
+      )}
+
+      {deleteBeritaTarget && (
+        <ModalDeleteBerita
+          open={!!deleteBeritaTarget}
+          onClose={() => setDeleteBeritaTarget(null)}
+          onDeleted={handleDeleted}
+          berita={deleteBeritaTarget}
         />
       )}
     </div>
