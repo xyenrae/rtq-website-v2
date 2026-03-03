@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import {
   IconChevronLeft,
   IconChevronRight,
@@ -66,6 +66,7 @@ export interface DataTableProps<T extends object> {
   toolbarExtra?: React.ReactNode
   emptyMessage?: string
   onRowClick?: (row: T) => void
+  externalFilter?: Record<string, string>
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -122,6 +123,7 @@ export function DataTable<T extends object>({
   toolbarExtra,
   emptyMessage = 'Tidak ada data ditemukan.',
   onRowClick,
+  externalFilter,
 }: DataTableProps<T>) {
   const [search, setSearch] = useState('')
   const [filterValues, setFilterValues] = useState<Record<string, string>>(() =>
@@ -288,6 +290,13 @@ export function DataTable<T extends object>({
     }
     return { isActive: false, dir: null, isDefault: false }
   }
+
+  useEffect(() => {
+    if (externalFilter && Object.keys(externalFilter).length > 0) {
+      setFilterValues((prev) => ({ ...prev, ...externalFilter }))
+      setPage(1) // reset ke halaman pertama
+    }
+  }, [externalFilter])
 
   return (
     <div className="flex flex-col gap-0 rounded-xl border border-border bg-card shadow-sm overflow-hidden">
@@ -522,87 +531,178 @@ export function DataTable<T extends object>({
       </div>
 
       {/* ── Footer / Pagination ── */}
-      <div className="flex items-center justify-between px-5 py-3 border-t border-border bg-card text-sm flex-wrap gap-4">
-        <div className="flex items-center gap-6 text-muted-foreground">
-          {/* Rows per page */}
-          <div className="flex items-center gap-2">
-            <span className="whitespace-nowrap text-muted-foreground">Baris per halaman:</span>
-            <Select
-              value={String(pageSize)}
-              onValueChange={(val) => {
-                setPageSize(Number(val) as PageSizeOption)
-                setPage(1)
-              }}
-            >
-              <SelectTrigger className="h-9 w-[110px] bg-background border border-border rounded-lg text-sm">
-                <SelectValue placeholder="Rows" />
-              </SelectTrigger>
-              <SelectContent
-                align="start"
-                side="bottom"
-                className="rounded-xl border border-border bg-popover shadow-xl"
+      <>
+        {/* ── Mobile Layout (2 Rows) ── */}
+        <div className="flex md:hidden flex-col gap-3 w-full px-4 py-3 border-t border-border bg-card">
+          {/* Row 1: Rows Selector (Left) & Pagination (Right) */}
+          <div className="flex items-center justify-between w-full">
+            {/* Rows per page */}
+            <div className="flex items-center gap-2">
+              <span className="whitespace-nowrap text-xs text-muted-foreground">Baris:</span>
+              <Select
+                value={String(pageSize)}
+                onValueChange={(val) => {
+                  setPageSize(Number(val) as PageSizeOption)
+                  setPage(1)
+                }}
               >
-                {pageSizeOptions.map((size) => (
-                  <SelectItem key={size} value={String(size)} className="cursor-pointer">
-                    <span className="text-foreground font-semibold">{size}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                <SelectTrigger className="h-8 w-[70px] bg-background border border-border rounded-md text-xs">
+                  <SelectValue placeholder="Rows" />
+                </SelectTrigger>
+                <SelectContent
+                  align="start"
+                  side="top"
+                  className="rounded-xl border border-border bg-popover shadow-lg"
+                >
+                  {pageSizeOptions.map((size) => (
+                    <SelectItem key={size} value={String(size)} className="cursor-pointer">
+                      <span className="text-foreground font-medium">{size}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Pagination Buttons */}
+            <div className="flex items-center gap-1">
+              <button
+                disabled={safePage <= 1}
+                onClick={() => setPage((p) => p - 1)}
+                className="p-2 rounded-md border border-input disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:bg-accent transition-colors"
+                aria-label="Previous page"
+              >
+                <IconChevronLeft size={16} />
+              </button>
+              {pageNums.map((p, i) =>
+                p === '...' ? (
+                  <span key={`e${i}`} className="px-2 text-muted-foreground/50 select-none">
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p as number)}
+                    className={`min-w-[36px] h-8 px-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                      safePage === p
+                        ? 'bg-primary text-primary-foreground shadow-sm scale-105'
+                        : 'border border-input text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:border-accent-foreground/20'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+              <button
+                disabled={safePage >= totalPages}
+                onClick={() => setPage((p) => p + 1)}
+                className="p-2 rounded-md border border-input disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:bg-accent transition-colors"
+                aria-label="Next page"
+              >
+                <IconChevronRight size={16} />
+              </button>
+            </div>
           </div>
 
-          {/* Range info */}
-          <span className="whitespace-nowrap text-sm">
-            <span className="text-muted-foreground">Menampilkan </span>
-            <span className="text-foreground font-semibold">
-              {filtered.length === 0
-                ? '0'
-                : `${(safePage - 1) * pageSize + 1}–${Math.min(safePage * pageSize, filtered.length)}`}
+          {/* Row 2: Info Text (Centered) */}
+          <div className="flex items-center justify-center w-full text-xs text-muted-foreground">
+            <span className="whitespace-nowrap">
+              Menampilkan{' '}
+              <span className="text-foreground font-semibold">
+                {filtered.length === 0
+                  ? '0'
+                  : `${(safePage - 1) * pageSize + 1}–${Math.min(safePage * pageSize, filtered.length)}`}
+              </span>{' '}
+              dari <span className="text-foreground font-semibold">{filtered.length}</span>
             </span>
-            <span className="text-muted-foreground"> dari </span>
-            <span className="text-foreground font-semibold">{filtered.length}</span>
-          </span>
+          </div>
         </div>
 
-        {/* Pagination */}
-        <div className="flex items-center gap-1">
-          <button
-            disabled={safePage <= 1}
-            onClick={() => setPage((p) => p - 1)}
-            className="p-2 rounded-md border border-input disabled:opacity-40 hover:enabled:bg-accent transition-colors"
-          >
-            <IconChevronLeft size={16} />
-          </button>
-
-          {pageNums.map((p, i) =>
-            p === '...' ? (
-              <span key={`e${i}`} className="px-2 text-muted-foreground/50">
-                …
-              </span>
-            ) : (
-              <button
-                key={p}
-                onClick={() => setPage(p as number)}
-                className={`min-w-[36px] h-9 px-2 rounded-md text-sm font-medium transition-colors ${
-                  safePage === p
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'border border-input text-foreground hover:bg-accent'
-                }`}
+        {/* ── Desktop Layout (1 Row) ── */}
+        <div className="hidden md:flex items-center justify-between w-full px-6 py-3 border-t border-border bg-card text-sm">
+          {/* Left: Rows Selector & Info */}
+          <div className="flex items-center gap-6 text-muted-foreground">
+            {/* Rows per page */}
+            <div className="flex items-center gap-2">
+              <span className="whitespace-nowrap">Baris per halaman:</span>
+              <Select
+                value={String(pageSize)}
+                onValueChange={(val) => {
+                  setPageSize(Number(val) as PageSizeOption)
+                  setPage(1)
+                }}
               >
-                {p}
-              </button>
-            )
-          )}
+                <SelectTrigger className="h-9 w-[110px] bg-background border border-border rounded-lg text-sm focus:ring-1 focus:ring-ring">
+                  <SelectValue placeholder="Rows" />
+                </SelectTrigger>
+                <SelectContent
+                  align="start"
+                  side="top"
+                  className="rounded-xl border border-border bg-popover shadow-lg"
+                >
+                  {pageSizeOptions.map((size) => (
+                    <SelectItem key={size} value={String(size)} className="cursor-pointer">
+                      <span className="text-foreground font-medium">{size}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <button
-            disabled={safePage >= totalPages}
-            onClick={() => setPage((p) => p + 1)}
-            className="p-2 rounded-md border border-input disabled:opacity-40 hover:enabled:bg-accent transition-colors"
-          >
-            <IconChevronRight size={16} />
-          </button>
+            {/* Range info */}
+            <span className="whitespace-nowrap">
+              <span className="text-muted-foreground">Menampilkan </span>
+              <span className="text-foreground font-semibold">
+                {filtered.length === 0
+                  ? '0'
+                  : `${(safePage - 1) * pageSize + 1}–${Math.min(safePage * pageSize, filtered.length)}`}
+              </span>
+              <span className="text-muted-foreground"> dari </span>
+              <span className="text-foreground font-semibold">{filtered.length}</span>
+            </span>
+          </div>
+
+          {/* Right: Pagination with Page Numbers */}
+          <div className="flex items-center gap-1">
+            <button
+              disabled={safePage <= 1}
+              onClick={() => setPage((p) => p - 1)}
+              className="p-2 rounded-md border border-input disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:bg-accent transition-colors"
+              aria-label="Previous page"
+            >
+              <IconChevronLeft size={16} />
+            </button>
+
+            {pageNums.map((p, i) =>
+              p === '...' ? (
+                <span key={`e${i}`} className="px-2 text-muted-foreground/50 select-none">
+                  …
+                </span>
+              ) : (
+                <button
+                  key={p}
+                  onClick={() => setPage(p as number)}
+                  className={`min-w-[36px] h-9 px-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                    safePage === p
+                      ? 'bg-primary text-primary-foreground shadow-sm scale-105'
+                      : 'border border-input text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:border-accent-foreground/20'
+                  }`}
+                >
+                  {p}
+                </button>
+              )
+            )}
+
+            <button
+              disabled={safePage >= totalPages}
+              onClick={() => setPage((p) => p + 1)}
+              className="p-2 rounded-md border border-input disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:bg-accent transition-colors"
+              aria-label="Next page"
+            >
+              <IconChevronRight size={16} />
+            </button>
+          </div>
         </div>
-      </div>
+      </>
     </div>
   )
 }

@@ -15,6 +15,7 @@ import {
   IconLoader2,
   IconAlertCircle,
   IconRefresh,
+  IconChevronRight,
 } from '@tabler/icons-react'
 import { DataTable, type ColumnDef, type DataTableFilter } from '@/components/data-table'
 import { ModalTambahBerita } from '@/components/protected/berita/modal-tambah-berita'
@@ -48,22 +49,100 @@ function StatCard({
   value,
   sub,
   accent,
+  ctaLabel,
+  onCtaClick,
+  ctaVariant = 'ghost',
 }: {
   icon: React.ReactNode
   label: string
   value: string | number
   sub: string
   accent: string
+  ctaLabel?: string
+  onCtaClick?: () => void
+  ctaVariant?: 'ghost' | 'outline' | 'default'
 }) {
+  const ctaStyles = {
+    ghost: 'text-primary hover:bg-primary/10',
+    outline: 'border border-input hover:bg-accent text-foreground',
+    default: 'bg-primary text-primary-foreground hover:opacity-90',
+  }
+
   return (
-    <div className="bg-card border border-border rounded-xl p-5 flex items-start gap-4 shadow-sm hover:shadow-md transition-shadow">
-      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${accent}`}>
-        {icon}
+    <div className="bg-card border border-border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow group">
+      {/* ── Desktop Layout (1 Row) ── */}
+      <div className="hidden sm:flex items-start gap-4">
+        {/* Icon */}
+        <div className={`w-11 h-11 rounded-lg flex items-center justify-center shrink-0 ${accent}`}>
+          {icon}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0 space-y-0.5">
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+            {label}
+          </p>
+          <p className="text-2xl font-bold text-foreground leading-tight break-words">{value}</p>
+          <p className="text-xs text-muted-foreground">{sub}</p>
+        </div>
+
+        {/* CTA */}
+        {ctaLabel && onCtaClick && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onCtaClick()
+            }}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shrink-0 mt-1 ${ctaStyles[ctaVariant]}`}
+          >
+            {ctaLabel}
+            <IconChevronRight
+              size={14}
+              className="opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"
+            />
+          </button>
+        )}
       </div>
-      <div className="min-w-0">
-        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
-        <p className="text-2xl font-bold text-foreground leading-tight">{value}</p>
-        <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>
+
+      {/* ── Mobile Layout (2 Rows) ── */}
+      <div className="flex sm:hidden flex-col gap-3">
+        {/* Row 1: Icon + Label/Value */}
+        <div className="flex items-start gap-3">
+          {/* Icon */}
+          <div
+            className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${accent}`}
+          >
+            {icon}
+          </div>
+
+          {/* Label + Value (Stacked) */}
+          <div className="flex-1 min-w-0 space-y-0.5">
+            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide leading-tight">
+              {label}
+            </p>
+            <p className="text-lg font-bold text-foreground leading-tight break-words">{value}</p>
+          </div>
+        </div>
+
+        {/* Row 2: Sub + CTA */}
+        <div className="flex items-center justify-between">
+          {/* Sub text */}
+          <p className="text-[10px] text-muted-foreground">{sub}</p>
+
+          {/* CTA Button */}
+          {ctaLabel && onCtaClick && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onCtaClick()
+              }}
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-medium transition-colors shrink-0 ${ctaStyles[ctaVariant]}`}
+            >
+              {ctaLabel}
+              <IconChevronRight size={12} className="opacity-70" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -103,6 +182,13 @@ export default function BeritaPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [editBerita, setEditBerita] = useState<Berita | null>(null)
   const [deleteBeritaTarget, setDeleteBeritaTarget] = useState<Berita | null>(null)
+
+  // Di dalam komponen BeritaPage
+  const [externalFilter, setExternalFilter] = useState<Record<string, string>>({})
+
+  const handleManagePublished = () => {
+    setExternalFilter({ status: 'draft' })
+  }
 
   function handleUpdate(updated: Berita) {
     setData((d) => d.map((b) => (b.id === updated.id ? updated : b)))
@@ -326,7 +412,7 @@ export default function BeritaPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-screen bg-background p-3 sm:p-6">
       {/* Header */}
       <div className="mb-6 flex items-start justify-between flex-wrap gap-4">
         <div>
@@ -373,7 +459,7 @@ export default function BeritaPage() {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
         <StatCard
           icon={
             loading ? (
@@ -388,11 +474,21 @@ export default function BeritaPage() {
           accent="bg-primary/10"
         />
         <StatCard
+          icon={<IconChartBar size={18} className="text-violet-600" />}
+          label="Rata-rata Views"
+          value={loading ? '—' : data.length ? Math.round(totalViews / data.length) : 0}
+          sub="Per artikel"
+          accent="bg-violet-100 dark:bg-violet-950"
+        />
+        <StatCard
           icon={<IconTrendingUp size={18} className="text-sky-600" />}
           label="Total Views"
           value={loading ? '—' : totalViews.toLocaleString()}
-          sub="Akumulasi semua berita"
+          sub="Akumulasi berita"
           accent="bg-sky-100 dark:bg-sky-950"
+          ctaLabel="Analisis"
+          onCtaClick={() => {}}
+          ctaVariant="outline"
         />
         <StatCard
           icon={<IconBookmark size={18} className="text-emerald-600" />}
@@ -400,13 +496,9 @@ export default function BeritaPage() {
           value={loading ? '—' : publishedCount}
           sub={loading ? '' : `${data.length - publishedCount} draft tersisa`}
           accent="bg-emerald-100 dark:bg-emerald-950"
-        />
-        <StatCard
-          icon={<IconChartBar size={18} className="text-violet-600" />}
-          label="Rata-rata Views"
-          value={loading ? '—' : data.length ? Math.round(totalViews / data.length) : 0}
-          sub="Per artikel"
-          accent="bg-violet-100 dark:bg-violet-950"
+          ctaLabel="Kelola"
+          onCtaClick={handleManagePublished}
+          ctaVariant="outline"
         />
       </div>
 
@@ -433,6 +525,7 @@ export default function BeritaPage() {
               Total <span className="font-semibold text-foreground">{data.length}</span> berita
             </span>
           }
+          externalFilter={externalFilter}
         />
       )}
 
