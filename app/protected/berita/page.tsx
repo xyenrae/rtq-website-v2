@@ -23,13 +23,13 @@ import { ModalEditBerita } from '@/components/protected/berita/modal-edit-berita
 import { ModalDeleteBerita } from '@/components/protected/berita/modal-delete-berita'
 import {
   fetchBerita,
-  fetchKategori,
   deleteBerita,
   deleteBulkBerita,
   type Berita,
   type BeritaKategori,
 } from '@/lib/berita'
 import { toast } from 'sonner'
+import { fetchKategori } from '@/lib/berita-kategori'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

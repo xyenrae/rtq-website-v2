@@ -1,7 +1,7 @@
-"use client"
+'use client'
 
-import * as React from "react"
-import { type Icon } from "@tabler/icons-react"
+import * as React from 'react'
+import { type Icon } from '@tabler/icons-react'
 
 import {
   SidebarGroup,
@@ -9,7 +9,8 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"
+  useSidebar,
+} from '@/components/ui/sidebar'
 
 export function NavSecondary({
   items,
@@ -21,6 +22,16 @@ export function NavSecondary({
     icon: Icon
   }[]
 } & React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
+  // 1. Ambil openMobile dan setOpenMobile dari useSidebar
+  const { openMobile, setOpenMobile } = useSidebar()
+
+  // 2. Fungsi untuk menutup sidebar jika sedang di mode mobile
+  const handleNavigation = () => {
+    if (openMobile) {
+      setOpenMobile(false)
+    }
+  }
+
   return (
     <SidebarGroup {...props}>
       <SidebarGroupContent>
@@ -28,7 +39,8 @@ export function NavSecondary({
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton asChild>
-                <a href={item.url}>
+                {/* 3. Tambahkan onClick pada link navigasi */}
+                <a href={item.url} onClick={handleNavigation}>
                   <item.icon />
                   <span>{item.title}</span>
                 </a>

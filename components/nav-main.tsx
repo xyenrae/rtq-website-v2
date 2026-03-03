@@ -10,6 +10,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from '@/components/ui/sidebar'
 import { Button } from './ui/button'
 
@@ -23,6 +24,13 @@ export function NavMain({
   }[]
 }) {
   const pathname = usePathname()
+  const { setOpenMobile, openMobile } = useSidebar()
+
+  const handleNavigation = () => {
+    if (openMobile) {
+      setOpenMobile(false)
+    }
+  }
 
   return (
     <SidebarGroup>
@@ -33,6 +41,7 @@ export function NavMain({
             <SidebarMenuButton
               tooltip="Quick Create"
               className="bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground min-w-8 duration-200 ease-linear"
+              onClick={handleNavigation}
             >
               <IconCirclePlusFilled size={20} /> <span>Quick Create</span>
             </SidebarMenuButton>
@@ -40,6 +49,7 @@ export function NavMain({
               size="icon"
               className="size-8 group-data-[collapsible=icon]:opacity-0"
               variant="outline"
+              onClick={handleNavigation}
             >
               <IconMail size={18} /> <span className="sr-only">Inbox</span>
             </Button>
@@ -62,7 +72,7 @@ export function NavMain({
                       : 'min-w-8 duration-200 ease-linear'
                   }
                 >
-                  <Link href={item.url}>
+                  <Link href={item.url} onClick={handleNavigation}>
                     {item.icon && <item.icon size={20} />}
                     <span>{item.title}</span>
                   </Link>

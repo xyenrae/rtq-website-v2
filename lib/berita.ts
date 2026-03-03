@@ -14,6 +14,7 @@ export class UploadValidationError extends Error {
 export interface BeritaKategori {
   id: string
   nama: string
+  deskripsi: string | null
 }
 
 export interface Berita {
@@ -62,14 +63,6 @@ export async function fetchBerita(): Promise<Berita[]> {
 
   if (error) throw error
   return data as Berita[]
-}
-
-export async function fetchKategori(): Promise<BeritaKategori[]> {
-  const supabase = getClient()
-  const { data, error } = await supabase.from('berita_kategori').select('id, nama').order('nama')
-
-  if (error) throw error
-  return data as BeritaKategori[]
 }
 
 export async function insertBerita(payload: BeritaInsert): Promise<Berita> {
