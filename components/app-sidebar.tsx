@@ -123,7 +123,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <a href="#">
                 {/* Ikon Logo Aplikasi */}
                 <IconShieldHalfFilled className="!size-6 text-primary" />
-                <span className="text-lg font-bold tracking-tight">Sistem Ponpes</span>
+                <span className="text-lg font-bold tracking-tight">Hayolo hayolo</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
