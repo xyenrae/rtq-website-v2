@@ -1,111 +1,90 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { IconDotsVertical, IconUserCircle } from '@tabler/icons-react'
-
+import { useEffect, useState } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
-} from '@/components/ui/sidebar'
-import { LogoutButton } from './logout-button'
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
+import { getPengaturanAkun, type PengaturanAkun } from '@/lib/pengaturan'
+import { createClient } from '@/lib/supabase/client'
+import { Loader2 } from 'lucide-react'
 
-export function NavUser({
-  user,
-}: {
-  user: {
-    name: string
-    email: string
-    avatar: string
-  }
-}) {
-  const router = useRouter()
-  const { isMobile, openMobile, setOpenMobile } = useSidebar()
+export function NavUser() {
+  const [akun, setAkun] = useState<PengaturanAkun | null>(null)
+  const [userEmail, setUserEmail] = useState<string>('')
+  const [loading, setLoading] = useState(true)
 
-  const handleNavigateToAkun = () => {
-    if (openMobile) {
-      setOpenMobile(false)
+  // Fetch data akun + email user
+  useEffect(() => {
+    const loadData = async () => {
+      const supabase = createClient()
+
+      // 1. Ambil email dari Supabase Auth
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (user?.email) setUserEmail(user.email)
+
+      // 2. Ambil profil dari tabel pengaturan_akun
+      const { data, error } = await getPengaturanAkun()
+      if (error) {
+        console.error('Gagal load akun:', error)
+      } else if (data) {
+        setAkun(data)
+      }
+
+      setLoading(false)
     }
-    router.push('/protected/akun')
-  }
+    loadData()
+  }, [])
 
-  const handleCloseSidebar = () => {
-    if (openMobile) {
-      setOpenMobile(false)
-    }
-  }
+  // Fallback data jika masih loading
+  const displayName = loading
+    ? 'Memuat...'
+    : akun?.nama_lengkap || userEmail?.split('@')[0] || 'Admin'
+
+  const displayEmail = loading ? '' : userEmail || 'admin@pesantren.id'
+  const displayAvatar = loading ? '' : akun?.avatar_url || ''
+  const initial = displayName?.charAt(0)?.toUpperCase() || 'A'
 
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-            >
-              <Avatar className="h-8 w-8 rounded-lg grayscale">
-                <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg">
-                  {user.name?.charAt(0)?.toUpperCase() ?? 'A'}
-                </AvatarFallback>
-              </Avatar>
+        <SidebarMenuButton
+          size="lg"
+          className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground cursor-default"
+          asChild={false}
+        >
+          <>
+            {/* Avatar */}
+            <Avatar className="h-8 w-8 rounded-lg grayscale">
+              <AvatarImage src={displayAvatar} alt={displayName} />
+              <AvatarFallback className="rounded-lg text-xs bg-muted">
+                {loading ? (
+                  <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
+                ) : (
+                  initial
+                )}
+              </AvatarFallback>
+            </Avatar>
 
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{user.name}</span>
-                <span className="text-muted-foreground truncate text-xs">{user.email}</span>
-              </div>
-
-              <IconDotsVertical className="ml-auto size-4" />
-            </SidebarMenuButton>
-          </DropdownMenuTrigger>
-
-          <DropdownMenuContent
-            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-            side={isMobile ? 'bottom' : 'right'}
-            align="end"
-            sideOffset={4}
-          >
-            <DropdownMenuLabel className="p-0 font-normal">
-              <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="rounded-lg">
-                    {user.name?.charAt(0)?.toUpperCase() ?? 'A'}
-                  </AvatarFallback>
-                </Avatar>
-
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{user.name}</span>
-                  <span className="text-muted-foreground truncate text-xs">{user.email}</span>
-                </div>
-              </div>
-            </DropdownMenuLabel>
-
-            <DropdownMenuSeparator />
-
-            <DropdownMenuItem onClick={handleNavigateToAkun} className="cursor-pointer">
-              <IconUserCircle className="mr-2 h-4 w-4" />
-              Akun
-            </DropdownMenuItem>
-
-            <DropdownMenuSeparator />
-
-            <DropdownMenuItem onClick={handleCloseSidebar} className="cursor-pointer">
-              <LogoutButton/>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            {/* Info User */}
+            <div className="grid flex-1 text-left text-sm leading-tight min-w-0">
+              <span className="truncate font-medium text-foreground">
+                {loading ? (
+                  <span className="inline-block w-24 h-3 bg-muted rounded animate-pulse" />
+                ) : (
+                  displayName
+                )}
+              </span>
+              <span className="text-muted-foreground truncate text-xs">
+                {loading ? (
+                  <span className="inline-block w-32 h-2 bg-muted/50 rounded animate-pulse" />
+                ) : (
+                  displayEmail
+                )}
+              </span>
+            </div>
+          </>
+        </SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarMenu>
   )
