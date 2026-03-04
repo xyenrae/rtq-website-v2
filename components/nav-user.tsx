@@ -1,17 +1,12 @@
 'use client'
 
-import {
-  IconCreditCard,
-  IconDotsVertical,
-  IconNotification,
-  IconUserCircle,
-} from '@tabler/icons-react'
+import { useRouter } from 'next/navigation'
+import { IconDotsVertical, IconUserCircle } from '@tabler/icons-react'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -34,11 +29,17 @@ export function NavUser({
     avatar: string
   }
 }) {
-  // 1. Tambahkan openMobile dan setOpenMobile
+  const router = useRouter()
   const { isMobile, openMobile, setOpenMobile } = useSidebar()
 
-  // 2. Fungsi untuk menutup sidebar jika sedang di mode mobile
-  const handleNavigation = () => {
+  const handleNavigateToAkun = () => {
+    if (openMobile) {
+      setOpenMobile(false)
+    }
+    router.push('/protected/akun')
+  }
+
+  const handleCloseSidebar = () => {
     if (openMobile) {
       setOpenMobile(false)
     }
@@ -55,15 +56,20 @@ export function NavUser({
             >
               <Avatar className="h-8 w-8 rounded-lg grayscale">
                 <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                <AvatarFallback className="rounded-lg">
+                  {user.name?.charAt(0)?.toUpperCase() ?? 'A'}
+                </AvatarFallback>
               </Avatar>
+
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>
                 <span className="text-muted-foreground truncate text-xs">{user.email}</span>
               </div>
+
               <IconDotsVertical className="ml-auto size-4" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
+
           <DropdownMenuContent
             className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
             side={isMobile ? 'bottom' : 'right'}
@@ -74,33 +80,29 @@ export function NavUser({
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                  <AvatarFallback className="rounded-lg">
+                    {user.name?.charAt(0)?.toUpperCase() ?? 'A'}
+                  </AvatarFallback>
                 </Avatar>
+
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{user.name}</span>
                   <span className="text-muted-foreground truncate text-xs">{user.email}</span>
                 </div>
               </div>
             </DropdownMenuLabel>
+
             <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              {/* 3. Tambahkan onClick pada setiap DropdownMenuItem */}
-              <DropdownMenuItem onClick={handleNavigation}>
-                <IconUserCircle />
-                Account
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleNavigation}>
-                <IconCreditCard />
-                Billing
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleNavigation}>
-                <IconNotification />
-                Notifications
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
+
+            <DropdownMenuItem onClick={handleNavigateToAkun} className="cursor-pointer">
+              <IconUserCircle className="mr-2 h-4 w-4" />
+              Akun
+            </DropdownMenuItem>
+
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleNavigation}>
-              <LogoutButton />
+
+            <DropdownMenuItem onClick={handleCloseSidebar} className="cursor-pointer">
+              <LogoutButton/>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

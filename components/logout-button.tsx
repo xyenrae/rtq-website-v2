@@ -16,7 +16,7 @@ export function LogoutButton() {
 
   return (
     <Button onClick={logout} variant="destructive" className='w-full justify-start'>
-      <IconLogout />
+      <IconLogout className='text-secondary'/>
       Logout
     </Button>
   )
