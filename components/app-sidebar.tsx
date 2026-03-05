@@ -48,9 +48,9 @@ const data = {
     { title: 'Agenda Kegiatan', url: '/protected/agenda', icon: IconCalendarEvent },
   ],
   documents: [
-    { name: 'Data Guru', url: '/protected/guru', icon: IconSchool },
-    { name: 'Data Santri', url: '/protected/santri', icon: IconUsers },
-    { name: 'Data Kelas', url: '/protected/kelas', icon: IconChalkboard },
+    { name: 'Monitoring Santri', url: '/protected/monitoring-santri', icon: IconSchool },
+    { name: 'Hasil Rekomendasi', url: '/protected/hasil-rekomendasi', icon: IconUsers },
+    { name: 'Aturan Capaian', url: '/protected/aturan-capaian', icon: IconChalkboard },
   ],
   // Update: tambahkan isLogout: true untuk item logout
   navSecondary: [
