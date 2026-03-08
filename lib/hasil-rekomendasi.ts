@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
-import { klasifikasiSantri } from '@/lib/classifier'
-import type { Santri, StatusRekomendasi } from '@/lib/types'
+import { mlKlasifikasiBatch } from '@/lib/mlClient'
+import type { StatusRekomendasi } from '@/lib/types'
 
 // ─── Client ───────────────────────────────────────────────────────────────────
 
@@ -98,43 +98,48 @@ export async function fetchStatistikRekomendasi(): Promise<StatistikRekomendasi>
 
 // ─── Mutations ────────────────────────────────────────────────────────────────
 
+/**
+ * Reklasifikasi SEMUA santri menggunakan Decision Tree via ML Service.
+ *
+ * Alur:
+ * 1. Ambil semua santri dari Supabase
+ * 2. Kirim ke ML Service (batch endpoint) untuk diklasifikasi
+ * 3. Simpan hasil rekomendasi ke tabel rekomendasi
+ */
 export async function reklasifikasiSemua(): Promise<{ berhasil: number; gagal: number }> {
   const supabase = getClient()
 
-  const [{ data: semuaSantri, error: sErr }, { data: aturan, error: aErr }] = await Promise.all([
-    supabase.from('santri').select('*'),
-    supabase.from('aturan_capaian').select('*').eq('is_active', true).single(),
-  ])
-
+  // Ambil semua santri
+  const { data: semuaSantri, error: sErr } = await supabase.from('santri').select('*')
   if (sErr) throw sErr
-  if (aErr) throw new Error('Aturan aktif tidak ditemukan')
 
-  let berhasil = 0
-  let gagal = 0
-  const insertBatch: object[] = []
-
-  for (const santri of semuaSantri ?? []) {
-    try {
-      const hasil = klasifikasiSantri(santri as Santri, aturan)
-      insertBatch.push({
-        santri_id: santri.id,
-        status: hasil.status,
-        alasan: hasil.alasan,
-        fitur_snapshot: hasil.fitur_snapshot,
-        probabilitas: hasil.probabilitas,
-        sumber: 'rule-based',
-        model_versi: hasil.model_versi,
-      })
-      berhasil++
-    } catch {
-      gagal++
-    }
+  if (!semuaSantri || semuaSantri.length === 0) {
+    return { berhasil: 0, gagal: 0 }
   }
+
+  // ✅ Kirim ke ML Service batch — lebih efisien dari panggil satu per satu
+  const batchResult = await mlKlasifikasiBatch(semuaSantri.map((s) => ({ id: s.id, ...s })))
+
+  // Format hasil untuk disimpan ke Supabase
+  const insertBatch = batchResult.hasil
+    .filter((h) => h.success && h.status)
+    .map((h) => ({
+      santri_id: h.id,
+      status: h.status!,
+      alasan: h.alasan ?? '',
+      fitur_snapshot: h.fitur_snapshot ?? {},
+      probabilitas: h.probabilitas ?? null,
+      sumber: 'decision-tree',
+      model_versi: h.model_versi ?? '',
+    }))
 
   if (insertBatch.length > 0) {
-    const { error } = await supabase.from('rekomendasi').insert(insertBatch)
-    if (error) throw error
+    const { error: insertErr } = await supabase.from('rekomendasi').insert(insertBatch)
+    if (insertErr) throw insertErr
   }
 
-  return { berhasil, gagal }
+  return {
+    berhasil: batchResult.berhasil,
+    gagal: batchResult.gagal,
+  }
 }

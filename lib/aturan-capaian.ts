@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
-import { klasifikasiSantri } from '@/lib/classifier'
-import type { AturanCapaian, AturanCapaianFormData, Santri } from '@/lib/types'
+import { mlLatih, mlFeatureImportance, type MLEvaluasiResult } from '@/lib/mlClient'
+import type { AturanCapaian, AturanCapaianFormData } from '@/lib/types'
 
 // ─── Client ───────────────────────────────────────────────────────────────────
 
@@ -17,6 +17,11 @@ export interface EvaluasiResult {
   f1: number
   versi: string
   berhasil: number
+}
+
+export interface FeatureImportanceItem {
+  nama: string
+  importance: number
 }
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
@@ -46,12 +51,20 @@ export async function fetchRiwayatAturan(): Promise<AturanCapaian[]> {
   return (data ?? []) as AturanCapaian[]
 }
 
+/**
+ * Ambil feature importance dari Decision Tree (fitur mana yang paling berpengaruh)
+ */
+export async function fetchFeatureImportance(): Promise<FeatureImportanceItem[]> {
+  const result = await mlFeatureImportance()
+  return result.features
+}
+
 // ─── Mutations ────────────────────────────────────────────────────────────────
 
 export async function simpanAturan(formData: AturanCapaianFormData): Promise<AturanCapaian> {
   const supabase = getClient()
 
-  // Nonaktifkan semua aturan lama (trigger DB juga akan handle ini, tapi eksplisitkan)
+  // Nonaktifkan semua aturan lama
   await supabase.from('aturan_capaian').update({ is_active: false }).eq('is_active', true)
 
   const { data, error } = await supabase
@@ -77,65 +90,82 @@ export async function resetAturanDefault(): Promise<AturanCapaian> {
   })
 }
 
+/**
+ * Latih ulang Decision Tree dengan aturan baru.
+ *
+ * Alur:
+ * 1. Simpan aturan baru ke Supabase
+ * 2. Ambil data santri yang sudah ada labelnya (dari rekomendasi manual guru) sebagai data latih
+ * 3. Kirim ke ML Service untuk dilatih ulang
+ * 4. Simpan hasil evaluasi kembali ke Supabase
+ *
+ * @param aturanId - ID aturan yang sudah disimpan di Supabase
+ */
 export async function latihUlangModel(aturanId: string): Promise<EvaluasiResult> {
   const supabase = getClient()
 
-  const [{ data: aturan, error: aErr }, { data: semuaSantri, error: sErr }] = await Promise.all([
-    supabase.from('aturan_capaian').select('*').eq('id', aturanId).single(),
-    supabase.from('santri').select('*'),
-  ])
+  // Ambil aturan dari DB
+  const { data: aturan, error: aErr } = await supabase
+    .from('aturan_capaian')
+    .select('*')
+    .eq('id', aturanId)
+    .single()
 
   if (aErr) throw new Error('Aturan tidak ditemukan')
+
+  // Ambil data santri beserta label rekomendasi terbaru sebagai data latih
+  // (hanya yang sudah pernah diklasifikasi → ada label ground truth)
+  const { data: dataSantri, error: sErr } = await supabase
+    .from('santri_dengan_rekomendasi')
+    .select('*')
+    .not('status_rekomendasi', 'is', null)
+
   if (sErr) throw sErr
 
-  const insertBatch: object[] = []
+  // Format data latih untuk ML Service
+  const dataLatih = (dataSantri ?? []).map((s) => ({
+    jilid_saat_ini: s.jilid_saat_ini,
+    total_pengulangan_taskih: s.total_pengulangan_taskih,
+    durasi_jilid_0: s.durasi_jilid_0 ?? null,
+    durasi_jilid_1: s.durasi_jilid_1 ?? null,
+    durasi_jilid_2: s.durasi_jilid_2 ?? null,
+    durasi_jilid_3: s.durasi_jilid_3 ?? null,
+    durasi_jilid_4: s.durasi_jilid_4 ?? null,
+    durasi_jilid_5: s.durasi_jilid_5 ?? null,
+    durasi_jilid_6: s.durasi_jilid_6 ?? null,
+    label: s.status_rekomendasi as 'BBK' | 'TBBK',
+  }))
 
-  for (const santri of semuaSantri ?? []) {
-    const hasil = klasifikasiSantri(santri as Santri, aturan)
-    insertBatch.push({
-      santri_id: santri.id,
-      status: hasil.status,
-      alasan: hasil.alasan,
-      fitur_snapshot: hasil.fitur_snapshot,
-      probabilitas: hasil.probabilitas,
-      sumber: 'rule-based',
-      model_versi: `rule-based-v${Date.now()}`,
-    })
-  }
+  // ✅ Panggil ML Service untuk latih Decision Tree
+  const evaluasi: MLEvaluasiResult = await mlLatih({
+    aturan: {
+      batas_durasi_jilid_0_4: aturan.batas_durasi_jilid_0_4,
+      batas_durasi_jilid_5_6: aturan.batas_durasi_jilid_5_6,
+      batas_pengulangan_taskih: aturan.batas_pengulangan_taskih,
+    },
+    data_latih: dataLatih.length >= 10 ? dataLatih : undefined, // min 10 data real
+  })
 
-  if (insertBatch.length > 0) {
-    const { error } = await supabase.from('rekomendasi').insert(insertBatch)
-    if (error) throw error
-  }
-
-  // Simulasi evaluasi model (rule-based deterministik)
-  const total = insertBatch.length
-  const akurasi = total > 0 ? 0.92 + Math.random() * 0.05 : 0
-  const precision = total > 0 ? 0.89 + Math.random() * 0.06 : 0
-  const recall = total > 0 ? 0.88 + Math.random() * 0.07 : 0
-  const f1 = precision > 0 && recall > 0 ? (2 * precision * recall) / (precision + recall) : 0
-  const versi = `rule-based-v${new Date().toISOString().slice(0, 10)}`
-
-  // Simpan hasil evaluasi ke aturan
+  // Simpan hasil evaluasi ke Supabase
   await supabase
     .from('aturan_capaian')
     .update({
-      model_versi: versi,
-      model_akurasi: parseFloat(akurasi.toFixed(4)),
-      model_precision: parseFloat(precision.toFixed(4)),
-      model_recall: parseFloat(recall.toFixed(4)),
-      model_f1: parseFloat(f1.toFixed(4)),
+      model_versi: evaluasi.versi,
+      model_akurasi: evaluasi.akurasi,
+      model_precision: evaluasi.precision,
+      model_recall: evaluasi.recall,
+      model_f1: evaluasi.f1,
       model_trained_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
     .eq('id', aturanId)
 
   return {
-    akurasi: parseFloat(akurasi.toFixed(4)),
-    precision: parseFloat(precision.toFixed(4)),
-    recall: parseFloat(recall.toFixed(4)),
-    f1: parseFloat(f1.toFixed(4)),
-    versi,
-    berhasil: total,
+    akurasi: evaluasi.akurasi,
+    precision: evaluasi.precision,
+    recall: evaluasi.recall,
+    f1: evaluasi.f1,
+    versi: evaluasi.versi,
+    berhasil: evaluasi.berhasil,
   }
 }
