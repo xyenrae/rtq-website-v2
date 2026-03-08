@@ -27,13 +27,8 @@ import {
   Cell,
   Legend,
 } from 'recharts'
-import {
-  fetchHasilRekomendasiList,
-  fetchStatistikRekomendasi,
-  reklasifikasiSemua,
-} from '@/lib/hasil-rekomendasi'
-import type { RekomendasiRow, StatistikRekomendasi } from '@/lib/hasil-rekomendasi'
 import type { StatusRekomendasi } from '@/lib/types'
+import { RekomendasiRow, StatistikRekomendasi, fetchHasilRekomendasiList, fetchStatistikRekomendasi, reklasifikasiSemua } from '@/lib/hasil-rekomendasi'
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 

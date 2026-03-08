@@ -13,15 +13,8 @@ import {
   IconInfoCircle,
   IconChartPie,
 } from '@tabler/icons-react'
-import {
-  fetchAturanAktif,
-  fetchRiwayatAturan,
-  simpanAturan,
-  resetAturanDefault,
-  latihUlangModel,
-} from '@/lib/aturan-capaian'
-import type { EvaluasiResult } from '@/lib/aturan-capaian'
-import type { AturanCapaian } from '@/lib/types'
+import { EvaluasiResult, fetchAturanAktif, fetchRiwayatAturan, simpanAturan, resetAturanDefault, latihUlangModel } from '@/lib/aturan-capaian';
+import { AturanCapaian } from '@/lib/types';
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
