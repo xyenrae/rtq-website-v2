@@ -25,7 +25,7 @@ interface SocialIconProps {
   label: string
 }
 
-// Komponen Ikon Sosial dengan Motion One
+// Komponen Ikon Sosial dengan Motion
 const SocialIcon: React.FC<SocialIconProps> = ({ href, children, label }) => (
   <motion.a
     href={href}
@@ -56,28 +56,35 @@ const FooterLink: React.FC<FooterLinkProps> = ({ href, label }) => {
 export default function Footer() {
   const [isMounted, setIsMounted] = useState(false)
   const [settings, setSettings] = useState({
+    nama_rtq: 'RTQ Al-Hikmah',
+    logo_url: '/images/logo-rtq.png',
     email: '',
-    phone_number: '',
+    no_whatsapp: '',
     alamat: '',
-    link_facebook: '',
-    link_instagram: '',
-    link_youtube: '',
+    facebook: '',
+    instagram: '',
+    youtube: '',
+    deskripsi_singkat: '',
   })
 
   const supabase = createClient()
 
   useEffect(() => {
-    // Hindari hydration error untuk new Date()
     setIsMounted(true)
 
     const fetchSettings = async () => {
+      // Mengambil data dari tabel 'pengaturan_website' sesuai skema SQL
       const { data, error } = await supabase
-        .from('settings')
-        .select('email, phone_number, alamat, link_facebook, link_instagram, link_youtube')
+        .from('pengaturan_website')
+        .select(
+          'nama_rtq, logo_url, email, no_whatsapp, alamat, facebook, instagram, youtube, deskripsi_singkat'
+        )
         .single()
 
       if (!error && data) {
         setSettings(data)
+      } else if (error) {
+        console.error('Error fetching settings:', error.message)
       }
     }
 
@@ -92,35 +99,43 @@ export default function Footer() {
           <div className="flex flex-col items-start space-y-6">
             <Link href="/" className="group flex items-center gap-3">
               <Image
-                src="/images/logo-rtq.png"
-                alt="Logo RTQ"
+                src={settings.logo_url || '/images/logo-rtq.png'}
+                alt={`Logo ${settings.nama_rtq}`}
                 width={70}
                 height={70}
                 className="object-contain"
               />
               <div className="flex flex-col">
-                <span className="font-bold text-2xl text-green-600 leading-tight">Al-Hikmah</span>
+                <span className="font-bold text-2xl text-green-600 leading-tight">
+                  {settings.nama_rtq.split(' ')[1] || settings.nama_rtq}
+                </span>
                 <span className="text-gray-500 text-xs font-medium uppercase tracking-wider">
                   Cinta Al-Qur&apos;an, Cinta Ilmu
                 </span>
               </div>
             </Link>
             <p className="text-gray-600 leading-relaxed text-sm md:text-base">
-              Kami berkomitmen untuk memberikan kesempatan belajar yang sesuai dengan usia bagi
-              setiap anak yang terdaftar di RTQ Al-Hikmah.
+              {settings.deskripsi_singkat ||
+                'Kami berkomitmen untuk memberikan kesempatan belajar yang sesuai dengan usia bagi setiap anak.'}
             </p>
 
             {/* Media Sosial */}
             <div className="flex gap-5 mt-4">
-              <SocialIcon href={settings.link_facebook || '#'} label="Facebook">
-                <IconBrandFacebook size={24} stroke={1.5} />
-              </SocialIcon>
-              <SocialIcon href={settings.link_instagram || '#'} label="Instagram">
-                <IconBrandInstagram size={24} stroke={1.5} />
-              </SocialIcon>
-              <SocialIcon href={settings.link_youtube || '#'} label="YouTube">
-                <IconBrandYoutube size={24} stroke={1.5} />
-              </SocialIcon>
+              {settings.facebook && (
+                <SocialIcon href={settings.facebook} label="Facebook">
+                  <IconBrandFacebook size={24} stroke={1.5} />
+                </SocialIcon>
+              )}
+              {settings.instagram && (
+                <SocialIcon href={settings.instagram} label="Instagram">
+                  <IconBrandInstagram size={24} stroke={1.5} />
+                </SocialIcon>
+              )}
+              {settings.youtube && (
+                <SocialIcon href={settings.youtube} label="YouTube">
+                  <IconBrandYoutube size={24} stroke={1.5} />
+                </SocialIcon>
+              )}
             </div>
           </div>
 
@@ -151,7 +166,7 @@ export default function Footer() {
               </div>
               <div className="flex items-center gap-3 sm:justify-end">
                 <IconPhone size={20} className="text-green-500 shrink-0" />
-                <span>{settings.phone_number || 'Nomor belum diatur'}</span>
+                <span>{settings.no_whatsapp || 'Nomor belum diatur'}</span>
               </div>
               <div className="flex items-center gap-3 sm:justify-end">
                 <IconMail size={20} className="text-green-500 shrink-0" />
@@ -164,7 +179,7 @@ export default function Footer() {
         {/* Footer Bottom */}
         <div className="border-t border-gray-200 mt-12 pt-8 text-center">
           <p className="text-gray-500 text-sm">
-            © {isMounted ? new Date().getFullYear() : '2026'} RTQ Al-Hikmah Ngurensiti. All rights
+            © {isMounted ? new Date().getFullYear() : '2026'} {settings.nama_rtq}. All rights
             reserved.
           </p>
         </div>
