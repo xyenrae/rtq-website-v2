@@ -1,69 +1,112 @@
-import { redirect } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
+'use client'
 
-import { DeployButton } from "@/components/deploy-button"
-import { EnvVarWarning } from "@/components/env-var-warning"
-import { AuthButton } from "@/components/auth-button"
-import { Hero } from "@/components/hero"
-import { ThemeSwitcher } from "@/components/theme-switcher"
-import { ConnectSupabaseSteps } from "@/components/tutorial/connect-supabase-steps"
-import { SignUpUserSteps } from "@/components/tutorial/sign-up-user-steps"
-import { hasEnvVars } from "@/lib/utils"
-import Link from "next/link"
-import { Suspense } from "react"
+import ProgramMembaca from '@/components/section/home/ProgramMembaca'
+import ProgramKami from '@/components/section/home/ProgramKami'
+import KenaliKami from '@/components/section/home/KenaliKami'
+import VisiMisi from '@/components/section/home/VisiMisi'
+import Guru from '@/components/section/home/Guru'
+import Berita from '@/components/section/home/Berita'
+import Hero from '@/components/section/home/Hero'
+import KelasUnggulan from '@/components/section/home/KelasUnggulan'
 
-export default async function Home() {
-  const supabase = await createClient()
-  const { data } = await supabase.auth.getUser()
+import { motion } from 'motion/react'
 
-  if (data?.user) {
-    redirect("/protected")
-  }
+const sectionVariants = {
+  hidden: { opacity: 0, y: -20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5 },
+  },
+}
 
+export default function Home() {
   return (
-    <main className="min-h-screen flex flex-col items-center">
-      <div className="flex-1 w-full flex flex-col gap-20 items-center">
-        <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16">
-          <div className="w-full max-w-5xl flex justify-between items-center p-3 px-5 text-sm">
-            <div className="flex gap-5 items-center font-semibold">
-              <Link href={"/"}>Next.js Supabase Starter</Link>
-              <div className="flex items-center gap-2">
-                <DeployButton />
-              </div>
-            </div>
-            {!hasEnvVars ? (
-              <EnvVarWarning />
-            ) : (
-              <Suspense>
-                <AuthButton />
-              </Suspense>
-            )}
-          </div>
-        </nav>
-
-        <div className="flex-1 flex flex-col gap-20 max-w-5xl p-5">
+    <div className="w-full overflow-x-hidden">
+      <div className="container mx-auto">
+        {/* Hero Section */}
+        <section className="relative overflow-hidden">
           <Hero />
-          <main className="flex-1 flex flex-col gap-6 px-4">
-            <h2 className="font-medium text-xl mb-4">Next steps</h2>
-            {hasEnvVars ? <SignUpUserSteps /> : <ConnectSupabaseSteps />}
-          </main>
-        </div>
+        </section>
 
-        <footer className="w-full flex items-center justify-center border-t mx-auto text-center text-xs gap-8 py-16">
-          <p>
-            Powered by{" "}
-            <a
-              href="https://supabase.com"
-              target="_blank"
-              className="font-bold hover:underline"
-              rel="noreferrer"
-            >
-              Supabase
-            </a>
-          </p>
-          <ThemeSwitcher />
-        </footer>
+        {/* Kelas Unggulan */}
+        <motion.section
+          className="mt-32 overflow-hidden"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.1 }}
+          variants={sectionVariants}
+        >
+          <KelasUnggulan />
+        </motion.section>
+
+        {/* Program Kami */}
+        <motion.section
+          className="mt-12"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.1 }}
+          variants={sectionVariants}
+        >
+          <ProgramKami />
+        </motion.section>
+
+        {/* Program Membaca */}
+        <motion.section
+          id="program-section"
+          className="mt-32"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.1 }}
+          variants={sectionVariants}
+        >
+          <ProgramMembaca />
+        </motion.section>
+
+        {/* Kenali Kami */}
+        <motion.section
+          className="mt-12"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.1 }}
+          variants={sectionVariants}
+        >
+          <KenaliKami />
+        </motion.section>
+
+        {/* Visi Misi */}
+        <motion.section
+          className="mt-12"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.1 }}
+          variants={sectionVariants}
+        >
+          <VisiMisi />
+        </motion.section>
+
+        {/* Guru */}
+        <motion.section
+          className="mt-32"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.1 }}
+          variants={sectionVariants}
+        >
+          <Guru />
+        </motion.section>
+
+        {/* Berita */}
+        <motion.section
+          className="mt-12"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.1 }}
+          variants={sectionVariants}
+        >
+          <Berita />
+        </motion.section>
       </div>
-    </main>
+    </div>
   )
 }

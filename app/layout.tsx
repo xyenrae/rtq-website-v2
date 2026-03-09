@@ -1,43 +1,54 @@
 import type { Metadata } from 'next'
-import { Geist } from 'next/font/google'
-import { ThemeProvider } from 'next-themes'
-import GlobalLoader from '@/components/global-loader'
 import { Toaster } from 'sonner'
+import { ThemeProvider } from 'next-themes'
+import NextTopLoader from 'nextjs-toploader'
+import ConditionalLayout from '@/components/layout/ConditionalLayout'
 import './globals.css'
 
-const defaultUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : 'http://localhost:3000'
-
 export const metadata: Metadata = {
-  metadataBase: new URL(defaultUrl),
-  title: 'Next.js and Supabase Starter Kit',
-  description: 'The fastest way to build apps with Next.js and Supabase',
+  title: "RTQ Al-Hikmah Ngurensiti | Pendidikan Al-Qur'an Metode Yanbu'a di Pati",
+  description:
+    "Lembaga pendidikan Al-Qur'an berbasis metode Yanbu'a di Desa Ngurensiti, Kecamatan Wedarijaksa, Kabupaten Pati. Didukung program Imtihan resmi dari Lajnah Muroqobah Yanbu'a (LMY) Kabupaten Pati.",
+  keywords: [
+    'RTQ Al-Hikmah Ngurensiti',
+    "Pendidikan Al-Qur'an Pati",
+    "Metode Yanbu'a",
+    "Lajnah Muroqobah Yanbu'a",
+    'Kabupaten Pati',
+  ],
+  authors: [{ name: 'RTQ Al-Hikmah', url: 'https://rtq-website.vercel.app/' }],
+  openGraph: {
+    title: "RTQ Al-Hikmah Ngurensiti | Pendidikan Al-Qur'an Metode Yanbu'a di Pati",
+    description: "Program belajar Al-Qur'an dengan kurikulum terstruktur dan metode Yanbu'a.",
+    url: 'https://rtq-website.vercel.app/',
+    siteName: 'RTQ Al-Hikmah Ngurensiti',
+    images: [
+      {
+        url: '/images/logo-rtq.png',
+        width: 1200,
+        height: 630,
+        alt: 'RTQ Al-Hikmah Ngurensiti',
+      },
+    ],
+    locale: 'id_ID',
+    type: 'website',
+  },
+  icons: {
+    icon: '/favicon.ico',
+  },
 }
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  display: 'swap',
-  subsets: ['latin'],
-})
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.className} antialiased`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <Toaster richColors position="top-center" />
-          <GlobalLoader />
-          {children}
+    <html lang="id" suppressHydrationWarning>
+      <body className="antialiased bg-gray-50 text-slate-900 w-screen overflow-x-hidden">
+        {/* Progress bar saat pindah halaman */}
+        <NextTopLoader color="#22c55e" showSpinner={false} />
+
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+          <ConditionalLayout>{children}</ConditionalLayout>
+          {/* Mengganti ToastContainer dengan Sonner Toaster */}
+          <Toaster position="top-right" richColors closeButton />
         </ThemeProvider>
       </body>
     </html>
