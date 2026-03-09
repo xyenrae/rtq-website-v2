@@ -1,14 +1,12 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
-// Define the Kategori interface dengan properti id dan nama
 interface Kategori {
   id: string
   nama: string
 }
 
-// Define the Berita interface
 interface Berita {
   id: string
   judul: string
@@ -20,58 +18,63 @@ interface Berita {
   waktu_baca: number
   created_at: string
   updated_at: string
-  kategori: Kategori // Mengandung id dan nama
+  kategori: Kategori
 }
 
 export function useBerita(selectedCategory: string = '') {
   const [berita, setBerita] = useState<Berita[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false) // Default ke false
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const pageSize = 6
-  const supabase = createClient()
+
+  // Inisialisasi Supabase di luar useEffect atau gunakan useMemo
+  const supabase = useMemo(() => createClient(), [])
 
   // Reset state saat kategori berubah
   useEffect(() => {
     setBerita([])
     setPage(1)
     setHasMore(true)
-    setIsLoading(true)
+    // Jangan set isLoading true di sini agar tidak bentrok dengan fetchBerita
   }, [selectedCategory])
 
-  useEffect(() => {
-    const fetchBerita = async () => {
-      try {
-        setIsLoading(true)
-        let query = supabase
-          .from('berita')
-          // Mengambil data berita beserta data kategori (id dan nama)
-          .select('*, kategori:kategori_id (id, nama)')
-          .order('created_at', { ascending: false })
-          .range((page - 1) * pageSize, page * pageSize - 1)
+  const fetchBerita = useCallback(async () => {
+    // Cegah fetching jika sudah tidak ada data atau sedang loading
+    if (isLoading || (!hasMore && page !== 1)) return
 
-        // Jika ada filter kategori (selectedCategory tidak kosong), tambahkan kondisi filter
-        if (selectedCategory !== '') {
-          query = query.eq('kategori_id', selectedCategory)
-        }
+    try {
+      setIsLoading(true)
+      let query = supabase
+        .from('berita')
+        .select('*, kategori:kategori_id (id, nama)')
+        .order('created_at', { ascending: false })
+        .range((page - 1) * pageSize, page * pageSize - 1)
 
-        const { data, error } = await query
-
-        if (error) throw error
-
-        if (data) {
-          setBerita((prev) => (page === 1 ? data : [...prev, ...data]))
-          setHasMore(data.length === pageSize)
-        }
-      } catch (error) {
-        console.error('Error fetching berita:', error)
-      } finally {
-        setIsLoading(false)
+      if (selectedCategory !== '') {
+        query = query.eq('kategori_id', selectedCategory)
       }
-    }
 
+      const { data, error } = await query
+
+      if (error) throw error
+
+      if (data) {
+        setBerita((prev) => (page === 1 ? data : [...prev, ...data]))
+        setHasMore(data.length === pageSize)
+      }
+    } catch (error) {
+      console.error('Error fetching berita:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [page, selectedCategory, supabase, hasMore]) // hasMore & page sebagai kontrol
+
+  useEffect(() => {
     fetchBerita()
-  }, [page, selectedCategory, supabase])
+    // Hapus supabase dari dependensi jika tidak di-memoize,
+    // tapi karena sudah di-memoize di atas, ini aman.
+  }, [page, selectedCategory, fetchBerita])
 
   return { berita, isLoading, setPage, hasMore }
 }
