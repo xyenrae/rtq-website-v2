@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Fredoka } from 'next/font/google'
 import { Toaster } from 'sonner'
 import { ThemeProvider } from 'next-themes'
 import NextTopLoader from 'nextjs-toploader'
@@ -6,6 +7,12 @@ import ConditionalLayout from '@/components/layout/ConditionalLayout'
 import './globals.css'
 import { createClient } from '@/lib/supabase/client'
 import { unstable_cache } from 'next/cache'
+
+const fredoka = Fredoka({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-fredoka',
+})
 
 const getWebsiteSettings = unstable_cache(
   async () => {
@@ -50,8 +57,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="id" suppressHydrationWarning>
-      <body className="antialiased bg-background text-foreground w-screen overflow-x-hidden font-sans">
+    <html lang="id" suppressHydrationWarning className={fredoka.variable}>
+      <body className="antialiased bg-background text-foreground w-screen overflow-x-hidden font-fredoka">
         <NextTopLoader color="var(--primary)" showSpinner={false} />
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <ConditionalLayout>{children}</ConditionalLayout>

@@ -14,7 +14,7 @@ export default function ConditionalLayout({
   children,
 }: ConditionalLayoutProps) {
   const pathname = usePathname();
-  const isAdmin = pathname.startsWith("/admin");
+  const isAdmin = pathname.startsWith("/protected");
 
   const [showScrollToTop, setShowScrollToTop] = useState(false);
 

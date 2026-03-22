@@ -1,12 +1,21 @@
 'use client'
 
 import * as DialogPrimitive from '@radix-ui/react-dialog'
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
-import { IconLogout, IconX, IconAlertTriangle, IconLoader2, type Icon } from '@tabler/icons-react'
+import {
+  IconLogout,
+  IconX,
+  IconAlertTriangle,
+  IconLoader2,
+  IconCheck,
+  IconShieldLock,
+  IconTrash,
+  IconDoor,
+  type Icon,
+} from '@tabler/icons-react'
 
 import {
   SidebarGroup,
@@ -19,13 +28,94 @@ import {
 
 import { createClient } from '@/lib/supabase/client'
 
-// ─── Utils ────────────────────────────────────────────────────────────────────
-
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Logout Steps ─────────────────────────────────────────────────────────────
+
+type StepStatus = 'idle' | 'loading' | 'done' | 'error'
+
+interface LogoutStep {
+  id: string
+  label: string
+  description: string
+  icon: React.ReactNode
+  status: StepStatus
+}
+
+const INITIAL_STEPS: LogoutStep[] = [
+  {
+    id: 'auth',
+    label: 'Mengakhiri sesi',
+    description: 'Mencabut token autentikasi',
+    icon: <IconShieldLock className="w-4 h-4" />,
+    status: 'idle',
+  },
+  {
+    id: 'clear',
+    label: 'Membersihkan data lokal',
+    description: 'Menghapus cache & cookie',
+    icon: <IconTrash className="w-4 h-4" />,
+    status: 'idle',
+  },
+  {
+    id: 'redirect',
+    label: 'Mengalihkan halaman',
+    description: 'Menuju halaman utama',
+    icon: <IconDoor className="w-4 h-4" />,
+    status: 'idle',
+  },
+]
+
+// ─── Step Indicator ───────────────────────────────────────────────────────────
+
+function StepIndicator({ step }: { step: LogoutStep }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div
+        className={cn(
+          'w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-300',
+          step.status === 'idle' && 'bg-muted text-muted-foreground',
+          step.status === 'loading' && 'bg-primary/10 text-primary',
+          step.status === 'done' && 'bg-green-500/10 text-green-600 dark:text-green-400',
+          step.status === 'error' && 'bg-destructive/10 text-destructive'
+        )}
+      >
+        {step.status === 'loading' && <IconLoader2 className="w-4 h-4 animate-spin" />}
+        {step.status === 'done' && <IconCheck className="w-4 h-4" />}
+        {step.status === 'error' && <IconAlertTriangle className="w-4 h-4" />}
+        {step.status === 'idle' && step.icon}
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <p
+          className={cn(
+            'text-sm font-medium transition-colors duration-200',
+            step.status === 'idle' && 'text-muted-foreground',
+            step.status === 'loading' && 'text-foreground',
+            step.status === 'done' && 'text-foreground',
+            step.status === 'error' && 'text-destructive'
+          )}
+        >
+          {step.label}
+        </p>
+        <p className="text-xs text-muted-foreground truncate">{step.description}</p>
+      </div>
+
+      {step.status === 'done' && (
+        <span className="text-xs text-green-600 dark:text-green-400 font-medium shrink-0">
+          Selesai
+        </span>
+      )}
+      {step.status === 'loading' && (
+        <span className="text-xs text-primary font-medium shrink-0 animate-pulse">Proses...</span>
+      )}
+    </div>
+  )
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export function NavSecondary({
   items,
@@ -39,60 +129,72 @@ export function NavSecondary({
   }[]
   label?: string
 }) {
-  const router = useRouter()
   const { openMobile, setOpenMobile } = useSidebar()
   const [openConfirm, setOpenConfirm] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [isDone, setIsDone] = useState(false)
+  const [steps, setSteps] = useState<LogoutStep[]>(INITIAL_STEPS)
 
-  // Fungsi untuk menutup sidebar mobile setelah navigasi
+  // Reset state setiap kali dialog dibuka
+  useEffect(() => {
+    if (openConfirm) {
+      setSteps(INITIAL_STEPS)
+      setIsLoggingOut(false)
+      setIsDone(false)
+    }
+  }, [openConfirm])
+
   const handleNavigation = () => {
-    if (openMobile) {
-      setOpenMobile(false)
-    }
+    if (openMobile) setOpenMobile(false)
   }
 
-  // Handler saat dialog ditutup
-  const handleDialogOpenChange = (isOpen: boolean) => {
-    if (!isOpen && openConfirm && !isLoggingOut) {
-      setOpenConfirm(false)
-    } else {
-      setOpenConfirm(isOpen)
-    }
+  const updateStep = (id: string, status: StepStatus) => {
+    setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)))
   }
 
-  // Logic logout Supabase dengan feedback proper
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
   const handleLogout = async () => {
     if (isLoggingOut) return
-
     setIsLoggingOut(true)
-    const toastId = toast.loading('Sedang keluar...')
 
     try {
+      // Step 1: Supabase signOut
+      updateStep('auth', 'loading')
       const supabase = createClient()
       const { error } = await supabase.auth.signOut()
-
       if (error) throw error
+      await sleep(600)
+      updateStep('auth', 'done')
 
-      toast.success('Berhasil keluar dari akun', {
-        id: toastId,
-        description: 'Sampai jumpa lagi!',
-        duration: 3000,
-      })
+      // Step 2: Clear local data
+      updateStep('clear', 'loading')
+      await sleep(700)
+      updateStep('clear', 'done')
 
-      setOpenConfirm(false)
-      router.push('/')
-      router.refresh()
-      handleNavigation()
+      // Step 3: Redirect
+      updateStep('redirect', 'loading')
+      await sleep(500)
+      updateStep('redirect', 'done')
+
+      setIsDone(true)
+      await sleep(800)
+
+      window.location.href = '/'
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Terjadi kesalahan saat logout'
+
+      // Mark current loading step as error
+      setSteps((prev) => prev.map((s) => (s.status === 'loading' ? { ...s, status: 'error' } : s)))
+
       toast.error('Gagal keluar', {
-        id: toastId,
         description: message,
         duration: 5000,
       })
-      console.error('Logout error:', error)
-    } finally {
+
+      await sleep(1500)
       setIsLoggingOut(false)
+      setSteps(INITIAL_STEPS)
     }
   }
 
@@ -103,8 +205,7 @@ export function NavSecondary({
         {items.map((item) => (
           <SidebarMenuItem key={item.title}>
             {item.isLogout ? (
-              // Item Logout: Dialog dengan Radix UI primitives
-              <DialogPrimitive.Root open={openConfirm} onOpenChange={handleDialogOpenChange}>
+              <DialogPrimitive.Root open={openConfirm} onOpenChange={setOpenConfirm}>
                 <DialogPrimitive.Trigger asChild>
                   <SidebarMenuButton asChild>
                     <button
@@ -133,8 +234,8 @@ export function NavSecondary({
                   />
 
                   <DialogPrimitive.Content
-                    onInteractOutside={(e) => e.preventDefault()}
-                    onEscapeKeyDown={(e) => e.preventDefault()}
+                    onInteractOutside={(e) => isLoggingOut && e.preventDefault()}
+                    onEscapeKeyDown={(e) => isLoggingOut && e.preventDefault()}
                     className={cn(
                       'fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%]',
                       'w-full max-w-md flex flex-col',
@@ -147,110 +248,137 @@ export function NavSecondary({
                       'duration-200'
                     )}
                   >
-                    {/* Header */}
+                    {/* ── Header ── */}
                     <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-border">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-destructive/10 flex items-center justify-center shrink-0">
-                          <IconLogout className="w-4.5 h-4.5 text-destructive" />
+                        <div
+                          className={cn(
+                            'w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300',
+                            isDone ? 'bg-green-500/10' : 'bg-destructive/10'
+                          )}
+                        >
+                          {isDone ? (
+                            <IconCheck className="w-4.5 h-4.5 text-green-600 dark:text-green-400" />
+                          ) : (
+                            <IconLogout className="w-4.5 h-4.5 text-destructive" />
+                          )}
                         </div>
                         <div>
                           <DialogPrimitive.Title className="text-base font-bold text-foreground">
-                            Konfirmasi Keluar
+                            {isDone ? 'Berhasil Keluar' : 'Konfirmasi Keluar'}
                           </DialogPrimitive.Title>
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            Anda akan mengakhiri sesi admin saat ini
+                            {isDone
+                              ? 'Mengalihkan ke halaman utama...'
+                              : 'Anda akan mengakhiri sesi admin saat ini'}
                           </p>
                         </div>
                       </div>
-                      <DialogPrimitive.Close
-                        onClick={() => setOpenConfirm(false)}
-                        disabled={isLoggingOut}
-                        className="rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors p-1.5 disabled:opacity-40"
-                      >
-                        <IconX className="w-4 h-4" />
-                        <span className="sr-only">Tutup</span>
-                      </DialogPrimitive.Close>
+
+                      {!isLoggingOut && (
+                        <DialogPrimitive.Close className="rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors p-1.5">
+                          <IconX className="w-4 h-4" />
+                          <span className="sr-only">Tutup</span>
+                        </DialogPrimitive.Close>
+                      )}
                     </div>
 
-                    {/* Body */}
-                    <div className="px-6 py-5 space-y-4">
-                      {/* Warning banner */}
-                      <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-destructive/5 border border-destructive/20">
-                        <IconAlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-                        <p className="text-xs text-destructive leading-relaxed">
-                          Pastikan semua perubahan penting sudah disimpan sebelum keluar dari akun.
-                        </p>
-                      </div>
-
-                      {/* Session info card */}
-                      <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                            <IconLogout className="w-5 h-5 text-primary" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold text-foreground truncate">
-                              Keluar dari Akun Admin
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              Anda perlu login kembali untuk mengakses dashboard
+                    {/* ── Body ── */}
+                    <div className="px-6 py-5">
+                      {!isLoggingOut ? (
+                        // Tampilan konfirmasi awal
+                        <div className="space-y-4">
+                          <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-destructive/5 border border-destructive/20">
+                            <IconAlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                            <p className="text-xs text-destructive leading-relaxed">
+                              Pastikan semua perubahan penting sudah disimpan sebelum keluar dari
+                              akun.
                             </p>
                           </div>
-                        </div>
 
-                        {/* Info list */}
-                        <div className="flex flex-wrap gap-2">
-                          <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-background border border-border px-2.5 py-1 rounded-full">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                            Sesi akan diakhiri
-                          </span>
-                          <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-background border border-border px-2.5 py-1 rounded-full">
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                            Token auth dihapus
-                          </span>
+                          <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                <IconLogout className="w-5 h-5 text-primary" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-foreground truncate">
+                                  Keluar dari Akun Admin
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Anda perlu login kembali untuk mengakses dashboard
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2">
+                              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-background border border-border px-2.5 py-1 rounded-full">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                Sesi akan diakhiri
+                              </span>
+                              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-background border border-border px-2.5 py-1 rounded-full">
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                Token auth dihapus
+                              </span>
+                            </div>
+                          </div>
                         </div>
+                      ) : (
+                        // Tampilan progress steps saat proses logout
+                        <div className="space-y-1">
+                          {steps.map((step, index) => (
+                            <div key={step.id}>
+                              <StepIndicator step={step} />
+                              {index < steps.length - 1 && (
+                                <div
+                                  className={cn(
+                                    'ml-4 w-0.5 h-4 my-1 rounded-full transition-colors duration-500',
+                                    steps[index].status === 'done' ? 'bg-green-500/40' : 'bg-border'
+                                  )}
+                                />
+                              )}
+                            </div>
+                          ))}
+
+                          {isDone && (
+                            <div className="pt-3 pb-1">
+                              <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-green-500/10 border border-green-500/20">
+                                <IconCheck className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
+                                <p className="text-xs text-green-700 dark:text-green-300 font-medium">
+                                  Sampai jumpa! Mengalihkan halaman...
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ── Footer ── */}
+                    {!isLoggingOut && (
+                      <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border bg-muted/20">
+                        <DialogPrimitive.Close asChild>
+                          <button
+                            type="button"
+                            className="px-4 py-2 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors"
+                          >
+                            Batal
+                          </button>
+                        </DialogPrimitive.Close>
+                        <button
+                          type="button"
+                          onClick={handleLogout}
+                          className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold bg-destructive text-destructive-foreground hover:opacity-90 shadow-sm transition-all duration-200"
+                        >
+                          <IconLogout className="w-4 h-4" />
+                          Ya, Keluar
+                        </button>
                       </div>
-                    </div>
-
-                    {/* Footer */}
-                    <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border bg-muted/20">
-                      <button
-                        type="button"
-                        onClick={() => setOpenConfirm(false)}
-                        disabled={isLoggingOut}
-                        className="px-4 py-2 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-                      >
-                        Batal
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleLogout}
-                        disabled={isLoggingOut}
-                        className={cn(
-                          'flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200',
-                          !isLoggingOut
-                            ? 'bg-destructive text-destructive-foreground hover:opacity-90 shadow-sm'
-                            : 'bg-destructive/30 text-destructive-foreground/50 cursor-not-allowed'
-                        )}
-                      >
-                        {isLoggingOut ? (
-                          <>
-                            <IconLoader2 className="w-4 h-4 animate-spin" />
-                            Keluar...
-                          </>
-                        ) : (
-                          <>
-                            <IconLogout className="w-4 h-4" />
-                            Ya, Keluar
-                          </>
-                        )}
-                      </button>
-                    </div>
+                    )}
                   </DialogPrimitive.Content>
                 </DialogPrimitive.Portal>
               </DialogPrimitive.Root>
             ) : (
-              // Item Biasa: Link dengan href
               <SidebarMenuButton asChild>
                 <a href={item.url} onClick={handleNavigation}>
                   {item.icon && <item.icon className="w-4 h-4" />}

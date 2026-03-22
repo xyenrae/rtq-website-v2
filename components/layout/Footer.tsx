@@ -31,7 +31,6 @@ const SocialIcon: React.FC<SocialIconProps> = ({ href, children, label }) => (
     href={href}
     target="_blank"
     rel="noopener noreferrer"
-    whileHover={{ y: -3, transition: { duration: 0.2 } }}
     className="text-gray-600 hover:text-green-600 transition-colors"
     aria-label={label}
   >
@@ -39,14 +38,14 @@ const SocialIcon: React.FC<SocialIconProps> = ({ href, children, label }) => (
   </motion.a>
 )
 
-// Komponen Link dengan Animasi Sliding Text
+// Komponen Link
 const FooterLink: React.FC<FooterLinkProps> = ({ href, label }) => {
   return (
     <Link href={href} className="relative overflow-hidden group block py-1">
-      <span className="inline-block transition-transform duration-300 group-hover:-translate-y-full">
+      <span className="inline-block transition-transform duration-300">
         {label}
       </span>
-      <span className="absolute top-full left-0 transition-transform duration-300 group-hover:-translate-y-full text-green-500">
+      <span className="absolute top-full left-0 transition-transform duration-300 text-green-500">
         {label}
       </span>
     </Link>
@@ -151,7 +150,7 @@ export default function Footer() {
               <div className="space-y-1">
                 <FooterLink href="/galeri" label="Galeri" />
                 <FooterLink href="/kontak" label="Kontak" />
-                <FooterLink href="/login" label="Admin" />
+                <FooterLink href="/auth/login" label="Admin" />
               </div>
             </div>
           </div>

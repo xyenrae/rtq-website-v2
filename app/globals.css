@@ -4,7 +4,19 @@
 
 @custom-variant dark (&:is(.dark *));
 
+body {
+  font-family: var(--font-fredoka), sans-serif;
+}
+
+body:has([data-protected]),
+body:has([data-protected]) * {
+  font-family: var(--font-admin), sans-serif;
+}
+
 @theme {
+  --font-fredoka: 'Fredoka', sans-serif;
+  --font-admin: 'Inter', sans-serif;
+
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
 
