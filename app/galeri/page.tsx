@@ -269,7 +269,7 @@ export default function GaleriPage() {
             bg-card shadow-2xl
             flex flex-col
           "
-          hideCloseButton
+          showCloseButton
         >
           {selectedImage && (
             <>
