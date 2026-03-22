@@ -1,8 +1,7 @@
 'use client'
 import { createClient } from '@/lib/supabase/client'
-import { useState, useEffect, FormEvent } from 'react'
-import { IconBrandWhatsapp } from '@tabler/icons-react'
-import { MapPin, MessageSquare, Phone } from 'lucide-react'
+import { useState, useEffect, SyntheticEvent } from 'react'
+import { IconBrandWhatsapp, IconMapPin, IconMessage, IconPhone } from '@tabler/icons-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,28 +11,38 @@ import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 
+type PengaturanWebsite = {
+  no_whatsapp: string | null
+  google_maps_embed: string | null
+  nama_rtq: string
+  alamat: string | null
+}
+
 export default function KontakPage() {
   const supabase = createClient()
   const [formData, setFormData] = useState({
     fullName: '',
     message: '',
   })
-  const [whatsappNumber, setWhatsappNumber] = useState('')
+  const [pengaturan, setPengaturan] = useState<PengaturanWebsite | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
-    const fetchSettings = async () => {
-      const { data, error } = await supabase.from('settings').select('phone_number').limit(1)
+    const fetchPengaturan = async () => {
+      const { data, error } = await supabase
+        .from('pengaturan_website')
+        .select('no_whatsapp, google_maps_embed, nama_rtq, alamat')
+        .limit(1)
+        .single()
 
       if (error) {
         console.error(error)
       } else {
-        const number = data[0]?.phone_number
-        setWhatsappNumber(number)
+        setPengaturan(data)
       }
     }
 
-    fetchSettings()
+    fetchPengaturan()
   }, [supabase])
 
   const generateWhatsAppMessage = (name: string, message: string) => {
@@ -48,28 +57,28 @@ Jazakumullah khairan katsiran.`
     return encodeURIComponent(template)
   }
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault()
 
     const { fullName, message } = formData
-    if (!fullName || !message) return
+    if (!fullName || !message || !pengaturan?.no_whatsapp) return
 
     setIsLoading(true)
     const finalMessage = generateWhatsAppMessage(fullName, message)
-    const whatsappURL = `https://wa.me/${whatsappNumber}?text=${finalMessage}`
+    const whatsappURL = `https://wa.me/${pengaturan.no_whatsapp}?text=${finalMessage}`
     window.open(whatsappURL, '_blank')
     setIsLoading(false)
   }
 
   return (
-    <div className="container mx-auto px-4 py-10">
+    <div className="container mx-auto px-4 py-10 max-w-5xl">
       {/* Header */}
       <div className="mb-8">
         <Badge
           variant="secondary"
           className="mb-3 bg-primary/10 text-primary border-primary/20 hover:bg-primary/15"
         >
-          <Phone className="w-3 h-3 mr-1" />
+          <IconPhone size={12} className="mr-1" />
           Kontak Kami
         </Badge>
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Hubungi Kami</h1>
@@ -85,7 +94,7 @@ Jazakumullah khairan katsiran.`
           <CardHeader className="pb-4">
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-lg bg-primary/10">
-                <MessageSquare className="w-4 h-4 text-primary" />
+                <IconMessage size={16} className="text-primary" />
               </div>
               <div>
                 <CardTitle className="text-base">Form Konsultasi</CardTitle>
@@ -124,7 +133,9 @@ Jazakumullah khairan katsiran.`
               <Button
                 type="submit"
                 className="w-full bg-[#25D366] hover:bg-[#1ebe5d] text-white font-medium gap-2"
-                disabled={isLoading || !formData.fullName || !formData.message}
+                disabled={
+                  isLoading || !formData.fullName || !formData.message || !pengaturan?.no_whatsapp
+                }
               >
                 <IconBrandWhatsapp size={18} />
                 Kirim via WhatsApp
@@ -138,26 +149,35 @@ Jazakumullah khairan katsiran.`
           <CardHeader className="pb-3 px-4 pt-4">
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-lg bg-primary/10">
-                <MapPin className="w-4 h-4 text-primary" />
+                <IconMapPin size={16} className="text-primary" />
               </div>
               <div>
                 <CardTitle className="text-base">Lokasi Kami</CardTitle>
                 <CardDescription className="text-xs mt-0.5">
-                  TPQ Alhikmah Ngurensiti
+                  {pengaturan?.nama_rtq ?? '—'}
+                  {pengaturan?.alamat && (
+                    <span className="block text-muted-foreground">{pengaturan.alamat}</span>
+                  )}
                 </CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <iframe
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3962.585855355361!2d111.08164387475487!3d-6.698103893297417!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e70d5a33a27fecf%3A0x8d549f17bc450140!2sTPQ%20Alhikmah%20Ngurensiti!5e0!3m2!1sen!2sid!4v1739173001291!5m2!1sen!2sid"
-              width="100%"
-              height="340"
-              style={{ border: 0, display: 'block' }}
-              allowFullScreen
-              loading="eager"
-              title="Lokasi TPQ Alhikmah Ngurensiti"
-            />
+            {pengaturan?.google_maps_embed ? (
+              <iframe
+                src={pengaturan.google_maps_embed}
+                width="100%"
+                height="340"
+                style={{ border: 0, display: 'block' }}
+                allowFullScreen
+                loading="eager"
+                title={`Lokasi ${pengaturan.nama_rtq}`}
+              />
+            ) : (
+              <div className="h-[340px] flex items-center justify-center bg-muted text-muted-foreground text-sm">
+                Peta belum dikonfigurasi
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
