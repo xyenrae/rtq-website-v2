@@ -10,20 +10,30 @@ export interface GaleriKategori {
 export function useGaleriKategori() {
   const [kategori, setKategori] = useState<GaleriKategori[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
 
   useEffect(() => {
+    let isMounted = true
+    const supabase = createClient()
+
     async function fetchKategori() {
-      const { data, error } = await supabase.from('galeri_kategori').select('*')
+      const { data, error } = await supabase
+        .from('galeri_kategori')
+        .select('id, nama')
+        .order('nama', { ascending: true })
+
       if (error) {
         console.error('Gagal mengambil data kategori galeri:', error)
-      } else {
+      } else if (data && isMounted) {
         setKategori(data as GaleriKategori[])
       }
-      setLoading(false)
+      if (isMounted) setLoading(false)
     }
+
     fetchKategori()
-  }, [supabase])
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   return { kategori, loading }
 }

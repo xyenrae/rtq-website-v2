@@ -4,54 +4,76 @@ import { createClient } from '@/lib/supabase/client'
 
 export interface GaleriImage {
   id: string
-  image: string
-  galeri_kategori_id: string
+  image_url: string
+  galeri_kategori_id: string | null
   created_at: string
-  galeri_nama: string
-  width: number
-  height: number
+  width: number | null
+  height: number | null
+  judul: string | null
+  deskripsi: string | null
 }
 
-interface SupabaseGaleriData {
+interface SupabaseGaleriRow {
   id: string
-  image: string
-  galeri_kategori_id: string
+  image_url: string
+  galeri_kategori_id: string | null
   created_at: string
-  galeri_kategori: { nama: string } | null
-  width: number
-  height: number
+  width: number | null
+  height: number | null
+  judul: string | null
+  deskripsi: string | null
 }
 
 export function useGaleri() {
   const [galeri, setGaleri] = useState<GaleriImage[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
 
   useEffect(() => {
-    const fetchGaleri = async () => {
+    let isMounted = true
+    const supabase = createClient()
+
+    async function fetchGaleri() {
       try {
         const { data, error } = await supabase
           .from('galeri')
-          .select(`*, galeri_kategori (nama)`)
+          .select('id, image_url, galeri_kategori_id, created_at, width, height, judul, deskripsi')
           .order('created_at', { ascending: false })
 
         if (error) {
           console.error('Gagal mengambil data galeri:', error)
-        } else if (data) {
-          const transformedData = (data as SupabaseGaleriData[]).map((item) => ({
-            ...item,
-            galeri_nama: item.galeri_kategori ? item.galeri_kategori.nama : 'Tidak ada kategori',
-          }))
-          setGaleri(transformedData as GaleriImage[])
+          return
+        }
+
+        if (data && isMounted) {
+          const rows = data as unknown as SupabaseGaleriRow[]
+          const transformed: GaleriImage[] = rows
+            .filter((item) => item.image_url && item.image_url.trim() !== '')
+            .map((item) => ({
+              id: item.id,
+              image_url: item.image_url.startsWith('http')
+                ? item.image_url
+                : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/galeri/${item.image_url}`,
+              galeri_kategori_id: item.galeri_kategori_id,
+              created_at: item.created_at,
+              width: item.width,
+              height: item.height,
+              judul: item.judul,
+              deskripsi: item.deskripsi,
+            }))
+          setGaleri(transformed)
         }
       } catch (err) {
         console.error('Error fetching galeri:', err)
       } finally {
-        setLoading(false)
+        if (isMounted) setLoading(false)
       }
     }
+
     fetchGaleri()
-  }, [supabase])
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   return { galeri, loading }
 }
