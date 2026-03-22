@@ -25,101 +25,124 @@ interface SocialIconProps {
   label: string
 }
 
-// Komponen Ikon Sosial dengan Motion
+interface SiteSettings {
+  nama_rtq: string
+  logo_url: string | null
+  email: string | null
+  no_whatsapp: string | null
+  alamat: string | null
+  facebook: string | null
+  instagram: string | null
+  youtube: string | null
+  deskripsi_singkat: string | null
+}
+
+const DEFAULT_SETTINGS: SiteSettings = {
+  nama_rtq: 'RTQ Al-Hikmah',
+  logo_url: '/images/logo-rtq.png',
+  email: null,
+  no_whatsapp: null,
+  alamat: null,
+  facebook: null,
+  instagram: null,
+  youtube: null,
+  deskripsi_singkat: null,
+}
+
 const SocialIcon: React.FC<SocialIconProps> = ({ href, children, label }) => (
   <motion.a
     href={href}
     target="_blank"
     rel="noopener noreferrer"
-    className="text-gray-600 hover:text-green-600 transition-colors"
+    className="text-gray-500 hover:text-green-600 transition-colors duration-300"
     aria-label={label}
+    whileHover={{ scale: 1.15 }}
+    whileTap={{ scale: 0.95 }}
   >
     {children}
   </motion.a>
 )
 
-// Komponen Link
 const FooterLink: React.FC<FooterLinkProps> = ({ href, label }) => {
   return (
-    <Link href={href} className="relative overflow-hidden group block py-1">
-      <span className="inline-block transition-transform duration-300">
-        {label}
-      </span>
-      <span className="absolute top-full left-0 transition-transform duration-300 text-green-500">
-        {label}
-      </span>
+    <Link
+      href={href}
+      className="
+        relative block py-1 text-gray-600
+        transition-colors duration-300 ease-in-out
+        hover:text-green-600
+        hover:after:w-full
+      "
+    >
+      {label}
     </Link>
   )
 }
 
 export default function Footer() {
   const [isMounted, setIsMounted] = useState(false)
-  const [settings, setSettings] = useState({
-    nama_rtq: 'RTQ Al-Hikmah',
-    logo_url: '/images/logo-rtq.png',
-    email: '',
-    no_whatsapp: '',
-    alamat: '',
-    facebook: '',
-    instagram: '',
-    youtube: '',
-    deskripsi_singkat: '',
-  })
-
-  const supabase = createClient()
+  const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS)
 
   useEffect(() => {
     setIsMounted(true)
 
     const fetchSettings = async () => {
-      // Mengambil data dari tabel 'pengaturan_website' sesuai skema SQL
+      const supabase = createClient()
+
+      // Gunakan .limit(1) + destructure index[0] untuk menghindari error .single()
+      // saat tabel kosong atau berisi lebih dari 1 baris
       const { data, error } = await supabase
         .from('pengaturan_website')
         .select(
           'nama_rtq, logo_url, email, no_whatsapp, alamat, facebook, instagram, youtube, deskripsi_singkat'
         )
-        .single()
+        .limit(1)
 
-      if (!error && data) {
-        setSettings(data)
-      } else if (error) {
+      if (error) {
         console.error('Error fetching settings:', error.message)
+        return
+      }
+
+      if (data && data.length > 0) {
+        setSettings({ ...DEFAULT_SETTINGS, ...data[0] })
       }
     }
 
     fetchSettings()
-  }, [supabase])
+  }, [])
+
+  const logoSrc = settings.logo_url || '/images/logo-rtq.png'
+  const brandName = settings.nama_rtq.split(' ')[1] || settings.nama_rtq
 
   return (
     <footer className="pt-16 pb-8 border-t border-gray-100 bg-white">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-12 lg:gap-16">
-          {/* Bagian 1: Logo & Deskripsi */}
+          {/* Kolom 1: Logo & Deskripsi */}
           <div className="flex flex-col items-start space-y-6">
             <Link href="/" className="group flex items-center gap-3">
               <Image
-                src={settings.logo_url || '/images/logo-rtq.png'}
+                src={logoSrc}
                 alt={`Logo ${settings.nama_rtq}`}
                 width={70}
                 height={70}
                 className="object-contain"
               />
               <div className="flex flex-col">
-                <span className="font-bold text-2xl text-green-600 leading-tight">
-                  {settings.nama_rtq.split(' ')[1] || settings.nama_rtq}
-                </span>
+                <span className="font-bold text-2xl text-green-600 leading-tight">{brandName}</span>
                 <span className="text-gray-500 text-xs font-medium uppercase tracking-wider">
                   Cinta Al-Qur&apos;an, Cinta Ilmu
                 </span>
               </div>
             </Link>
+
             <p className="text-gray-600 leading-relaxed text-sm md:text-base">
               {settings.deskripsi_singkat ||
                 'Kami berkomitmen untuk memberikan kesempatan belajar yang sesuai dengan usia bagi setiap anak.'}
             </p>
 
             {/* Media Sosial */}
-            <div className="flex gap-5 mt-4">
+            <div className="flex gap-5 mt-2">
               {settings.facebook && (
                 <SocialIcon href={settings.facebook} label="Facebook">
                   <IconBrandFacebook size={24} stroke={1.5} />
@@ -138,16 +161,16 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Bagian 2: Navigasi Cepat */}
+          {/* Kolom 2: Navigasi Cepat */}
           <div className="flex flex-col sm:items-center">
             <h3 className="text-xl font-bold mb-6 text-gray-800">Navigasi Cepat</h3>
-            <div className="grid grid-cols-2 gap-x-8 gap-y-2 w-full max-w-xs text-sm md:text-base text-gray-600">
-              <div className="space-y-1">
+            <div className="grid grid-cols-2 gap-x-8 gap-y-1 w-full max-w-xs text-sm md:text-base">
+              <div className="space-y-0.5">
                 <FooterLink href="/" label="Beranda" />
                 <FooterLink href="/berita" label="Berita" />
                 <FooterLink href="/pendaftaran" label="Pendaftaran" />
               </div>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <FooterLink href="/galeri" label="Galeri" />
                 <FooterLink href="/kontak" label="Kontak" />
                 <FooterLink href="/auth/login" label="Admin" />
@@ -155,7 +178,7 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Bagian 3: Kontak */}
+          {/* Kolom 3: Kontak */}
           <div className="flex flex-col sm:items-end">
             <h3 className="text-xl font-bold mb-6 text-gray-800">Kontak Kami</h3>
             <div className="space-y-4 text-gray-600 text-sm md:text-base sm:text-right">
