@@ -47,54 +47,54 @@ export default function Berita() {
       </div>
 
       {/* Berita Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 lg:gap-6">
         {berita.slice(0, isMobile ? 3 : 6).map((item, index) => (
           <motion.div
             key={item.id}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: index * 0.1 }}
+            viewport={{ once: true, margin: '-50px' }}
+            transition={{ duration: 0.4, delay: index * 0.08 }}
           >
             <Link href={`/berita/${item.id}`} className="group block h-full">
-              <Card className="h-full bg-card/50 border-border hover:border-primary/50 hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-row sm:flex-col lg:flex-row shadow-sm">
-                {/* Gambar */}
-                <div className="relative w-1/3 sm:w-full lg:w-1/3 h-32 sm:h-48 lg:h-auto overflow-hidden">
+              <Card className="h-full flex flex-col overflow-hidden border border-border bg-card transition-all duration-300 hover:shadow-lg hover:border-primary/40 gap-0 py-0">
+                {/* IMAGE */}
+                <div className="relative w-full h-44 sm:h-48 overflow-hidden">
                   <Image
                     src={item.gambar || '/placeholder.jpg'}
                     alt={item.judul}
                     fill
-                    className="object-cover transition-transform duration-500 group-hover:scale-110"
-                    sizes="(max-width: 768px) 33vw, (max-width: 1200px) 50vw, 33vw"
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   />
-                  {/* Overlay gradien halus pada gambar */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-black/10 to-transparent" />
                 </div>
 
-                {/* Konten */}
-                <CardContent className="p-4 flex flex-col justify-between flex-1 gap-3">
+                {/* CONTENT */}
+                <CardContent className="flex flex-col flex-1 p-3 md:p-4 gap-1 md:gap-3">
+                  {/* TOP */}
                   <div className="space-y-2">
-                    {/* Kategori */}
                     {item.kategori && (
-                      <span className="text-[10px] uppercase tracking-wider font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
+                      <span className="inline-block text-[10px] font-semibold uppercase tracking-wide text-primary bg-primary/10 px-2 py-0.5 rounded">
                         {item.kategori.nama}
                       </span>
                     )}
-                    {/* Judul */}
-                    <h3 className="text-base sm:text-lg font-bold text-foreground line-clamp-2 group-hover:text-primary transition-colors leading-snug">
+
+                    <h3 className="text-sm sm:text-base font-semibold leading-snug text-foreground line-clamp-2 group-hover:text-primary transition-colors">
                       {item.judul}
                     </h3>
                   </div>
 
-                  {/* Footer Card: Tanggal */}
-                  <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/50">
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                  {/* FOOTER */}
+                  <div className="mt-auto flex items-center justify-between pt-3 border-t border-border/50 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1.5">
                       <IconCalendarEvent size={14} />
-                      <span className="text-xs">{formatDate(item.created_at)}</span>
+                      <span>{formatDate(item.created_at)}</span>
                     </div>
+
                     <IconArrowRight
                       size={16}
-                      className="text-primary opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all"
+                      className="text-primary opacity-0 translate-x-[-6px] group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300"
                     />
                   </div>
                 </CardContent>

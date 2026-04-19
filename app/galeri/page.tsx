@@ -14,7 +14,6 @@ import {
 import { useGaleri, GaleriImage } from '@/hooks/santri/galeri/useGaleri'
 import { useGaleriKategori } from '@/hooks/santri/galeri/useGaleriKategori'
 import SkeletonGaleri from '@/components/skeleton/galeri/SkeletonGaleri'
-import LoadMoreSpinner from '@/components/LoadMoreSpinner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog'
@@ -22,86 +21,101 @@ import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from 'sonner'
 
-const INITIAL_LOAD_COUNT = 12
-const LOAD_MORE_COUNT = 8
+// ── Pure CSS spinner – zero JS overhead ──────────────────────────────────────
+function LoadMoreSpinner() {
+  return (
+    <div className="flex items-center justify-center gap-3 py-4">
+      <span className="h-4 w-4 rounded-full border-2 border-muted border-t-foreground/60 animate-spin" />
+      <span className="text-sm font-medium text-muted-foreground">Memuat lebih banyak…</span>
+    </div>
+  )
+}
 
+// ── Single gallery card (memoised) ───────────────────────────────────────────
+const GalleryCard = ({
+  img,
+  priority,
+  onClick,
+}: {
+  img: GaleriImage
+  priority: boolean
+  onClick: (img: GaleriImage) => void
+}) => {
+  const ratio = img.width && img.height ? img.width / img.height : 4 / 3
+  // Taller images (portrait) span 2 rows in the masonry-like grid
+  const tall = ratio < 0.85
+
+  return (
+    <div
+      className={`relative overflow-hidden rounded-xl cursor-pointer group bg-muted${tall ? ' row-span-2' : ''}`}
+      onClick={() => onClick(img)}
+    >
+      <Image
+        src={img.image_url}
+        alt={img.judul ?? 'Foto galeri'}
+        fill
+        className="object-cover group-hover:scale-105 transition-transform duration-300"
+        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+        loading={priority ? 'eager' : 'lazy'}
+        quality={75}
+      />
+      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300" />
+      {img.judul && (
+        <div className="absolute bottom-0 left-0 right-0 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+          <p className="text-white text-sm font-medium line-clamp-2">{img.judul}</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const GalleryCardMemo = GalleryCard // already stable via parent memo pattern
+
+// ── Main page ─────────────────────────────────────────────────────────────────
 export default function GaleriPage() {
-  const { galeri, loading: loadingGaleri } = useGaleri()
-  const { kategori, loading: loadingKategori } = useGaleriKategori()
-  const loading = loadingGaleri || loadingKategori
-
   const [activeKategoriId, setActiveKategoriId] = useState<string | null>(null)
   const [selectedImage, setSelectedImage] = useState<GaleriImage | null>(null)
-  const [visibleCount, setVisibleCount] = useState(INITIAL_LOAD_COUNT)
-  const [isLoadingMore, setIsLoadingMore] = useState(false)
 
-  const loadMoreRef = useRef<HTMLDivElement>(null)
+  const { galeri, loading, loadingMore, hasMore, loadMore } = useGaleri(activeKategoriId)
+  const { kategori, loading: loadingKategori } = useGaleriKategori()
 
-  const filteredImages = useMemo<GaleriImage[]>(() => {
-    if (!galeri.length) return []
-    if (!activeKategoriId) return galeri
-    return galeri.filter((img) => img.galeri_kategori_id === activeKategoriId)
-  }, [galeri, activeKategoriId])
-
-  const displayedImages = useMemo<GaleriImage[]>(
-    () => filteredImages.slice(0, visibleCount),
-    [filteredImages, visibleCount]
-  )
-
-  const hasMoreImages = visibleCount < filteredImages.length
-
-  const currentIndex = useMemo(
-    () => filteredImages.findIndex((img) => img.id === selectedImage?.id),
-    [filteredImages, selectedImage]
-  )
-
-  const goNext = useCallback(() => {
-    if (currentIndex < filteredImages.length - 1) {
-      setSelectedImage(filteredImages[currentIndex + 1])
-    }
-  }, [currentIndex, filteredImages])
-
-  const goPrev = useCallback(() => {
-    if (currentIndex > 0) {
-      setSelectedImage(filteredImages[currentIndex - 1])
-    }
-  }, [currentIndex, filteredImages])
-
-  const loadMore = useCallback(() => {
-    if (isLoadingMore || !hasMoreImages) return
-    setIsLoadingMore(true)
-    setTimeout(() => {
-      setVisibleCount((prev) => Math.min(prev + LOAD_MORE_COUNT, filteredImages.length))
-      setIsLoadingMore(false)
-    }, 300)
-  }, [isLoadingMore, hasMoreImages, filteredImages.length])
-
+  // Sentinel for infinite scroll
+  const sentinelRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    if (loading || !hasMoreImages) return
+    if (!hasMore) return
+    const el = sentinelRef.current
+    if (!el) return
     const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) loadMore()
+      ([entry]) => {
+        if (entry.isIntersecting) loadMore()
       },
-      { threshold: 0.1, rootMargin: '300px' }
+      { threshold: 0.1, rootMargin: '400px' }
     )
-    const el = loadMoreRef.current
-    if (el) observer.observe(el)
+    observer.observe(el)
     return () => observer.disconnect()
-  }, [loading, hasMoreImages, loadMore])
+  }, [hasMore, loadMore])
+
+  // Keyboard nav
+  const currentIndex = useMemo(
+    () => galeri.findIndex((img) => img.id === selectedImage?.id),
+    [galeri, selectedImage]
+  )
+  const goNext = useCallback(() => {
+    if (currentIndex < galeri.length - 1) setSelectedImage(galeri[currentIndex + 1])
+  }, [currentIndex, galeri])
+  const goPrev = useCallback(() => {
+    if (currentIndex > 0) setSelectedImage(galeri[currentIndex - 1])
+  }, [currentIndex, galeri])
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!selectedImage) return
+    if (!selectedImage) return
+    const handler = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight') goNext()
       if (e.key === 'ArrowLeft') goPrev()
     }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
   }, [selectedImage, goNext, goPrev])
-
-  useEffect(() => {
-    setVisibleCount(INITIAL_LOAD_COUNT)
-  }, [activeKategoriId])
 
   const handleDownload = useCallback(async () => {
     if (!selectedImage) return
@@ -126,16 +140,15 @@ export default function GaleriPage() {
 
   const handleShare = useCallback(async () => {
     if (!selectedImage) return
-    const shareData = {
-      title: selectedImage.judul ?? 'Foto Galeri',
-      text: selectedImage.deskripsi ?? 'Lihat foto ini dari galeri kami.',
-      url: selectedImage.image_url,
-    }
     if (navigator.share) {
       try {
-        await navigator.share(shareData)
+        await navigator.share({
+          title: selectedImage.judul ?? 'Foto Galeri',
+          text: selectedImage.deskripsi ?? 'Lihat foto ini dari galeri kami.',
+          url: selectedImage.image_url,
+        })
       } catch {
-        // user cancelled
+        /* cancelled */
       }
     } else {
       await navigator.clipboard.writeText(selectedImage.image_url)
@@ -143,7 +156,7 @@ export default function GaleriPage() {
     }
   }, [selectedImage])
 
-  if (loading) return <SkeletonGaleri />
+  if (loading || loadingKategori) return <SkeletonGaleri />
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -158,7 +171,7 @@ export default function GaleriPage() {
               className="object-cover"
               priority
               sizes="100vw"
-              unoptimized
+              quality={60}
             />
           ) : (
             <div className="w-full h-full bg-muted" />
@@ -189,21 +202,11 @@ export default function GaleriPage() {
 
       {/* ── Grid ── */}
       <section id="gallery-grid" className="container mx-auto px-4 py-12">
-        {/* Filter kategori */}
+        {/* Filter */}
         <div className="flex flex-wrap items-center gap-2 mb-8">
-          <button
-            onClick={() => setActiveKategoriId(null)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-              activeKategoriId === null
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-background text-foreground border-border hover:border-primary'
-            }`}
-          >
-            Semua
-          </button>
-          {kategori.map((cat) => (
+          {[{ id: null, nama: 'Semua' }, ...kategori].map((cat) => (
             <button
-              key={cat.id}
+              key={cat.id ?? '__all__'}
               onClick={() => setActiveKategoriId(cat.id)}
               className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                 activeKategoriId === cat.id
@@ -216,85 +219,76 @@ export default function GaleriPage() {
           ))}
         </div>
 
-        {displayedImages.length === 0 ? (
+        {galeri.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-muted-foreground gap-3">
             <IconPhoto size={40} strokeWidth={1.2} />
             <p className="text-base">Belum ada foto di kategori ini.</p>
           </div>
         ) : (
-          <div className="columns-2 sm:columns-3 lg:columns-4 gap-3 space-y-3">
-            {displayedImages.map((img) => (
-              <div
-                key={img.id}
-                className="break-inside-avoid relative overflow-hidden rounded-xl cursor-pointer group bg-muted"
-                style={{
-                  aspectRatio: img.width && img.height ? `${img.width}/${img.height}` : '4/3',
-                }}
-                onClick={() => setSelectedImage(img)}
-              >
-                <Image
-                  src={img.image_url}
-                  alt={img.judul ?? 'Foto galeri'}
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-300"
-                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                  loading="lazy"
-                  unoptimized
-                />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300" />
-                {img.judul && (
-                  <div className="absolute bottom-0 left-0 right-0 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                    <p className="text-white text-sm font-medium line-clamp-2">{img.judul}</p>
-                  </div>
-                )}
-              </div>
+          /**
+           * CSS Grid auto-rows masonry alternative.
+           * grid-rows-[masonry] is still experimental; instead we use a
+           * multi-column grid where tall images span 2 rows via row-span-2.
+           * Row height = 200px → portrait cards ≈ 400px, landscape ≈ 200px.
+           */
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 auto-rows-[200px] gap-3">
+            {galeri.map((img, i) => (
+              <GalleryCardMemo key={img.id} img={img} priority={i < 8} onClick={setSelectedImage} />
             ))}
           </div>
         )}
 
-        <div ref={loadMoreRef} className="flex justify-center mt-10 min-h-[60px]">
-          {isLoadingMore && <LoadMoreSpinner />}
+        {/* Infinite scroll sentinel */}
+        <div ref={sentinelRef} className="flex justify-center mt-10 min-h-[60px]">
+          {loadingMore && <LoadMoreSpinner />}
         </div>
       </section>
 
-      {/* ── Lightbox Dialog ── */}
+      {/* ── Lightbox ── */}
       <Dialog open={!!selectedImage} onOpenChange={(open) => !open && setSelectedImage(null)}>
         <DialogContent
           className="
-            p-0 gap-0 overflow-hidden
-            mx-4 sm:mx-auto
-            w-[calc(100%-2rem)] sm:w-full sm:max-w-4xl
-            max-h-[88dvh]
-            rounded-2xl border border-border/60
-            bg-card shadow-2xl
-            flex flex-col
-          "
-          showCloseButton
+      p-0 gap-0 overflow-hidden
+      mx-4 sm:mx-auto
+      w-[calc(100%-2rem)] sm:w-full sm:max-w-4xl
+      max-h-[88dvh]
+      rounded-2xl border border-border/60
+      bg-card shadow-2xl
+      flex flex-col
+    "
+          showCloseButton={false}
         >
           {selectedImage && (
             <>
-              {/* Image area */}
+              {/* Preload prev/next – warms browser cache sebelum diklik */}
+              {currentIndex > 0 && (
+                <link rel="preload" as="image" href={galeri[currentIndex - 1].image_url} />
+              )}
+              {currentIndex < galeri.length - 1 && (
+                <link rel="preload" as="image" href={galeri[currentIndex + 1].image_url} />
+              )}
+
+              {/* Image */}
               <div className="relative w-full bg-black overflow-hidden">
                 <div className="relative w-full aspect-[4/3] sm:aspect-[16/9] md:aspect-[16/8]">
                   <Image
+                    key={selectedImage.image_url}
                     src={selectedImage.image_url}
                     alt={selectedImage.judul ?? 'Preview'}
                     fill
                     className="object-contain"
                     sizes="(max-width: 768px) 95vw, 80vw"
                     priority
-                    unoptimized
+                    quality={85}
                   />
                 </div>
 
-                {/* Close */}
                 <DialogClose asChild>
                   <button className="absolute top-3 right-3 z-20 p-1.5 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors">
                     <IconX size={15} />
                   </button>
                 </DialogClose>
 
-                {/* Prev */}
                 {currentIndex > 0 && (
                   <button
                     onClick={goPrev}
@@ -304,9 +298,7 @@ export default function GaleriPage() {
                     <IconChevronLeft size={18} />
                   </button>
                 )}
-
-                {/* Next */}
-                {currentIndex < filteredImages.length - 1 && (
+                {currentIndex < galeri.length - 1 && (
                   <button
                     onClick={goNext}
                     className="absolute right-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-black/40 hover:bg-black/65 text-white transition-colors"
@@ -316,15 +308,13 @@ export default function GaleriPage() {
                   </button>
                 )}
 
-                {/* Counter */}
                 <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-black/50 text-white/70 text-xs tabular-nums select-none">
-                  {currentIndex + 1} / {filteredImages.length}
+                  {currentIndex + 1} / {galeri.length}
                 </div>
               </div>
 
-              {/* Info area */}
+              {/* Info */}
               <div className="flex flex-col px-5 py-4 gap-3">
-                {/* Judul */}
                 {selectedImage.judul ? (
                   <h3 className="font-semibold text-base text-foreground leading-snug line-clamp-2">
                     {selectedImage.judul}
@@ -333,7 +323,6 @@ export default function GaleriPage() {
                   <p className="text-muted-foreground text-sm italic">Tanpa judul</p>
                 )}
 
-                {/* Deskripsi */}
                 {selectedImage.deskripsi && (
                   <ScrollArea className="max-h-20">
                     <p className="text-muted-foreground text-sm leading-relaxed pr-2">
@@ -344,7 +333,6 @@ export default function GaleriPage() {
 
                 <Separator />
 
-                {/* Footer: tanggal + aksi */}
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <span className="flex items-center gap-1.5 text-muted-foreground text-xs">
                     <IconCalendar size={13} />
@@ -354,7 +342,6 @@ export default function GaleriPage() {
                       year: 'numeric',
                     })}
                   </span>
-
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
