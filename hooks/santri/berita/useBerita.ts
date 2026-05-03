@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect, useCallback, useMemo } from 'react'
+
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 interface Kategori {
@@ -21,38 +22,41 @@ interface Berita {
   kategori: Kategori
 }
 
+const PAGE_SIZE = 6
+
 export function useBerita(selectedCategory: string = '') {
   const [berita, setBerita] = useState<Berita[]>([])
-  const [isLoading, setIsLoading] = useState(false) // Default ke false
-  const [page, setPage] = useState(1)
+  const [isLoading, setIsLoading] = useState(true)
   const [hasMore, setHasMore] = useState(true)
-  const pageSize = 6
+  const [error, setError] = useState<string | null>(null)
 
-  // Inisialisasi Supabase di luar useEffect atau gunakan useMemo
-  const supabase = useMemo(() => createClient(), [])
+  // Referensi internal untuk kontrol pagination dan status fetch
+  const pageRef = useRef(1)
+  const isFetchingRef = useRef(false)
+  const categoryRef = useRef(selectedCategory)
+  const supabaseRef = useRef(createClient())
 
-  // Reset state saat kategori berubah
-  useEffect(() => {
-    setBerita([])
-    setPage(1)
-    setHasMore(true)
-    // Jangan set isLoading true di sini agar tidak bentrok dengan fetchBerita
-  }, [selectedCategory])
+  /**
+   * Mengambil data berita berdasarkan halaman dan kategori aktif.
+   */
+  const fetchBerita = useCallback(async (isReset = false) => {
+    if (isFetchingRef.current) return
 
-  const fetchBerita = useCallback(async () => {
-    // Cegah fetching jika sudah tidak ada data atau sedang loading
-    if (isLoading || (!hasMore && page !== 1)) return
+    const currentPage = isReset ? 1 : pageRef.current
+
+    isFetchingRef.current = true
+    setIsLoading(true)
+    setError(null)
 
     try {
-      setIsLoading(true)
-      let query = supabase
+      let query = supabaseRef.current
         .from('berita')
         .select('*, kategori:kategori_id (id, nama)')
         .order('created_at', { ascending: false })
-        .range((page - 1) * pageSize, page * pageSize - 1)
+        .range((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE - 1)
 
-      if (selectedCategory !== '') {
-        query = query.eq('kategori_id', selectedCategory)
+      if (categoryRef.current) {
+        query = query.eq('kategori_id', categoryRef.current)
       }
 
       const { data, error } = await query
@@ -60,21 +64,59 @@ export function useBerita(selectedCategory: string = '') {
       if (error) throw error
 
       if (data) {
-        setBerita((prev) => (page === 1 ? data : [...prev, ...data]))
-        setHasMore(data.length === pageSize)
+        setBerita((prev) => (currentPage === 1 ? data : [...prev, ...data]))
+        setHasMore(data.length === PAGE_SIZE)
+        pageRef.current = currentPage
       }
-    } catch (error) {
-      console.error('Error fetching berita:', error)
+    } catch (err) {
+      console.error('Error fetching berita:', err)
+      setError('Gagal memuat berita. Silakan coba lagi.')
+      setHasMore(false)
     } finally {
       setIsLoading(false)
+      isFetchingRef.current = false
     }
-  }, [page, selectedCategory, supabase, hasMore]) // hasMore & page sebagai kontrol
+  }, [])
 
+  /**
+   * Memuat ulang data saat kategori berubah.
+   */
   useEffect(() => {
-    fetchBerita()
-    // Hapus supabase dari dependensi jika tidak di-memoize,
-    // tapi karena sudah di-memoize di atas, ini aman.
-  }, [page, selectedCategory, fetchBerita])
+    categoryRef.current = selectedCategory
+    pageRef.current = 1
 
-  return { berita, isLoading, setPage, hasMore }
+    setBerita([])
+    setHasMore(true)
+    setError(null)
+
+    fetchBerita(true)
+  }, [selectedCategory, fetchBerita])
+
+  /**
+   * Memuat halaman berikutnya jika data masih tersedia.
+   */
+  const loadMore = useCallback(() => {
+    if (isFetchingRef.current || !hasMore) return
+
+    pageRef.current += 1
+    fetchBerita()
+  }, [hasMore, fetchBerita])
+
+  /**
+   * Mencoba kembali proses pengambilan data setelah gagal.
+   */
+  const retry = useCallback(() => {
+    setError(null)
+    setHasMore(true)
+    fetchBerita()
+  }, [fetchBerita])
+
+  return {
+    berita,
+    isLoading,
+    hasMore,
+    error,
+    loadMore,
+    retry,
+  }
 }

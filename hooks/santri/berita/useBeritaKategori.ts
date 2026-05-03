@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect } from 'react'
+
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 export interface BeritaKategori {
@@ -11,24 +12,40 @@ export function useKategori() {
   const [kategori, setKategori] = useState<BeritaKategori[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const supabase = createClient()
 
+  const supabaseRef = useRef(createClient())
+
+  /**
+   * Mengambil daftar kategori berita.
+   */
   useEffect(() => {
     const fetchKategori = async () => {
-      const { data, error } = await supabase
-        .from('berita_kategori')
-        .select('*')
-        .order('nama', { ascending: true })
-      if (error) {
+      setIsLoading(true)
+      setError(null)
+
+      try {
+        const { data, error } = await supabaseRef.current
+          .from('berita_kategori')
+          .select('*')
+          .order('nama', { ascending: true })
+
+        if (error) throw error
+
+        setKategori(data ?? [])
+      } catch (err) {
+        console.error('Error fetching kategori:', err)
         setError('Gagal memuat kategori.')
-      } else {
-        setKategori(data)
+      } finally {
+        setIsLoading(false)
       }
-      setIsLoading(false)
     }
 
     fetchKategori()
-  }, [supabase])
+  }, [])
 
-  return { kategori, isLoading, error }
+  return {
+    kategori,
+    isLoading,
+    error,
+  }
 }
