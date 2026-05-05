@@ -2,7 +2,6 @@
 
 import Image from 'next/image'
 import Autoplay from 'embla-carousel-autoplay'
-
 import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel'
 
 const programs = [
@@ -65,7 +64,7 @@ const programs = [
   {
     id: 8,
     title: 'Jilid 7',
-    desc: 'Kitab panduan belajar hukum tajwid: ta’awudz & basmalah, tanwin/nun sukun, mim sukun, ghunnah, mad',
+    desc: 'Kitab panduan belajar hukum tajwid: ta\u2019awudz & basmalah, tanwin/nun sukun, mim sukun, ghunnah, mad',
     yrs: '11-12',
     days: 6,
     hrs: 1.1,
@@ -95,65 +94,46 @@ const colorClasses = [
 export default function CardSliderJilid() {
   return (
     <div className="px-4">
-      <Carousel
-        opts={{
-          align: 'start',
-          loop: true,
-        }}
-        plugins={[
-          Autoplay({
-            delay: 3000,
-          }),
-        ]}
-      >
+      <Carousel opts={{ align: 'start', loop: true }} plugins={[Autoplay({ delay: 3000 })]}>
         <CarouselContent>
           {programs.map((program, index) => (
-            <CarouselItem
-              key={program.id}
-              className="
-              basis-full
-              md:basis-1/2
-              lg:basis-1/3
-            "
-            >
-              <div className="overflow-hidden flex flex-col h-full py-6 bg-white shadow-md rounded-lg">
-                <div className="relative flex justify-center">
+            <CarouselItem key={program.id} className="basis-full md:basis-1/2 lg:basis-1/3">
+              <div className="overflow-hidden flex flex-col h-full py-5 bg-white shadow-sm rounded-xl border border-gray-100">
+                <div className="flex justify-center">
                   <Image
                     src={`/images/${program.id === 9 ? 'tahaj' : `jilid-${program.id - 1}`}.png`}
                     alt={program.title}
-                    width={300}
-                    height={300}
-                    className="object-cover"
+                    width={200}
+                    height={200}
+                    className="object-contain"
                   />
                 </div>
 
-                <div className="px-6 mt-6 flex flex-col flex-1">
-                  <h3 className="text-xl font-semibold mb-2 text-gray-800">{program.title}</h3>
-
-                  <p className="text-gray-600 line-clamp-3 mb-6 flex-1">{program.desc}</p>
+                <div className="px-5 mt-4 flex flex-col flex-1">
+                  <h3 className="text-sm font-semibold mb-1.5 text-gray-800 md:text-base">
+                    {program.title}
+                  </h3>
+                  <p className="text-xs text-gray-600 line-clamp-3 mb-5 flex-1 leading-relaxed md:text-sm">
+                    {program.desc}
+                  </p>
 
                   <div
-                    className={`grid grid-cols-3 gap-4 border-t text-white rounded-xl p-4 ${
-                      colorClasses[index % colorClasses.length]
-                    }`}
+                    className={`grid grid-cols-3 gap-3 text-white rounded-xl p-3 ${colorClasses[index % colorClasses.length]}`}
                   >
-                    <div className="text-center">
-                      <p className="text-2xl font-bold">{program.yrs}</p>
-                      <p className="text-sm mt-1">Tahun</p>
-                      <p className="text-xs">Usia</p>
-                    </div>
-
-                    <div className="text-center border-x">
-                      <p className="text-2xl font-bold">{program.days}</p>
-                      <p className="text-sm mt-1">Hari</p>
-                      <p className="text-xs">Mingguan</p>
-                    </div>
-
-                    <div className="text-center">
-                      <p className="text-2xl font-bold">{program.hrs}</p>
-                      <p className="text-sm mt-1">Jam</p>
-                      <p className="text-xs">Periode</p>
-                    </div>
+                    {[
+                      { value: program.yrs, label: 'Tahun', sub: 'Usia' },
+                      { value: program.days, label: 'Hari', sub: 'Mingguan' },
+                      { value: program.hrs, label: 'Jam', sub: 'Periode' },
+                    ].map((stat, i) => (
+                      <div
+                        key={i}
+                        className={`text-center ${i === 1 ? 'border-x border-white/30' : ''}`}
+                      >
+                        <p className="text-lg font-bold md:text-xl">{stat.value}</p>
+                        <p className="text-[10px] mt-0.5 md:text-xs">{stat.label}</p>
+                        <p className="text-[10px] md:text-xs">{stat.sub}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>

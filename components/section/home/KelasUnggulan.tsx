@@ -15,7 +15,7 @@ const sectionVariants = {
 export default function KelasUnggulan() {
   return (
     <motion.div
-      className="container overflow-hidden"
+      className="container mx-auto overflow-hidden px-4 "
       variants={sectionVariants}
       initial="hidden"
       animate="visible"
@@ -28,8 +28,7 @@ export default function KelasUnggulan() {
           dengan cara yang menyenangkan, interaktif, serta penuh makna.
         </p>
       </div>
-
-      <CardSliderProgram />
+        <CardSliderProgram />
     </motion.div>
   )
 }

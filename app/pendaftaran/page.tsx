@@ -1,12 +1,11 @@
 'use client'
 
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
-import { motion, AnimatePresence } from 'motion/react'
+import Link from 'next/link'
+import { motion } from 'motion/react'
 import { createClient } from '@/lib/supabase/client'
 import {
-  IconBrandWhatsapp,
-  IconMail,
   IconMapPin,
   IconInfoCircle,
   IconClock,
@@ -14,7 +13,7 @@ import {
   IconUsers,
   IconClipboardCheck,
   IconSchool,
-  IconChevronDown,
+  IconArrowRight,
 } from '@tabler/icons-react'
 
 import {
@@ -26,213 +25,242 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
 
-const RegistrationPage = () => {
-  const [whatsappNumber, setWhatsappNumber] = useState('')
-  const [email, setEmail] = useState('')
+const steps = [
+  {
+    number: '01',
+    icon: <IconMapPin size={20} />,
+    title: 'Kunjungi Lembaga',
+    description: 'Datang langsung ke lokasi RTQ selama jam kerja, Sabtu–Kamis pukul 13.30–16.30.',
+  },
+  {
+    number: '02',
+    icon: <IconInfoCircle size={20} />,
+    title: 'Konsultasi & Tes',
+    description:
+      "Ustadzah menjelaskan program, melakukan tes baca Al-Qur'an, dan menentukan jilid yang sesuai.",
+  },
+  {
+    number: '03',
+    icon: <IconClock size={20} />,
+    title: 'Mulai Belajar',
+    description:
+      'Ikuti jadwal yang ditetapkan dan mulai pembelajaran sesuai jenjang yang telah ditentukan.',
+  },
+]
+
+const infoItems = [
+  {
+    icon: <IconInfoCircle size={20} />,
+    title: 'Penjelasan Program',
+    description:
+      "Santri belajar membaca Al-Qur'an dengan sistem kartu prestasi dan evaluasi (tashih) berkala.",
+  },
+  {
+    icon: <IconBuildingStore size={20} />,
+    title: 'Fasilitas Pembelajaran',
+    description:
+      'Tersedia 2 lantai dengan 5 ruang belajar, toilet, kantin, dan kipas angin di setiap ruangan.',
+  },
+  {
+    icon: <IconUsers size={20} />,
+    title: 'Ustadzah Berpengalaman',
+    description: "Dibimbing oleh pengajar yang sabar dan kompeten dalam metode Yanbu'a.",
+  },
+  {
+    icon: <IconClock size={20} />,
+    title: 'Jadwal Belajar',
+    description:
+      "Sabtu–Kamis. Jam I (13.30–14.45) untuk jilid 0–3, Jam II (15.00–16.25) untuk jilid 4–7 & Al-Qur'an.",
+  },
+  {
+    icon: <IconClipboardCheck size={20} />,
+    title: 'Program Imtihan',
+    description: 'Evaluasi resmi dari Yayasan LMY sebagai syarat kelulusan dan wisuda.',
+  },
+  {
+    icon: <IconSchool size={20} />,
+    title: 'Wisuda',
+    description: 'Acara resmi perayaan kelulusan setelah menyelesaikan seluruh jenjang program.',
+  },
+]
+
+export default function RegistrationPage() {
   const supabase = useMemo(() => createClient(), [])
+  const [rtqName, setRtqName] = useState('')
 
   useEffect(() => {
     const fetchSettings = async () => {
       const { data, error } = await supabase
-        .from('settings')
-        .select('phone_number, email')
+        .from('pengaturan_website')
+        .select('nama_rtq')
         .limit(1)
         .single()
-
-      if (!error && data) {
-        setWhatsappNumber(data.phone_number)
-        setEmail(data.email)
-      }
+      if (!error && data) setRtqName(data.nama_rtq)
     }
     fetchSettings()
   }, [supabase])
 
-  const steps = [
-    {
-      icon: <IconMapPin size={32} />,
-      title: 'Kunjungi Lembaga Kami',
-      description: 'Datang langsung ke lokasi RTQ kami selama jam kerja (13.30 - 16.30)',
-    },
-    {
-      icon: <IconInfoCircle size={32} />,
-      title: 'Konsultasi & Tes Kemampuan',
-      description:
-        'Ustadzah akan menjelaskan program, melakukan tes baca, dan menentukan jilid yang sesuai.',
-    },
-    {
-      icon: <IconClock size={32} />,
-      title: 'Mulai Membaca Jilid',
-      description:
-        'Ikuti jadwal yang telah ditentukan dan mulai pembelajaran dengan jilid yang ditetapkan.',
-    },
-  ]
-
-  const infoItems = [
-    {
-      icon: <IconInfoCircle size={24} />,
-      title: 'Penjelasan Program',
-      description:
-        "Santri belajar membaca Al-Qur'an dengan sistem kartu prestasi dan evaluasi (tashih) berkala.",
-    },
-    {
-      icon: <IconBuildingStore size={24} />,
-      title: 'Fasilitas Pembelajaran',
-      description:
-        'Tersedia 2 lantai dengan 5 ruang belajar, toilet, kantin, dan kipas angin di setiap ruangan.',
-    },
-    {
-      icon: <IconUsers size={24} />,
-      title: 'Ustadzah Berpengalaman',
-      description: "Dibimbing oleh pengajar yang sabar dan kompeten dalam metode Yanbu'a.",
-    },
-    {
-      icon: <IconClock size={24} />,
-      title: 'Jadwal Belajar',
-      description:
-        "Sabtu-Kamis. Jam I (13.30-14.45) jilid 0-3, Jam II (15.00-16.25) jilid 4-7 & Al-Qur'an.",
-    },
-    {
-      icon: <IconClipboardCheck size={24} />,
-      title: 'Program Imtihan',
-      description: 'Evaluasi resmi dari Yayasan LMY sebagai syarat kelulusan dan wisuda.',
-    },
-    {
-      icon: <IconSchool size={24} />,
-      title: 'Wisuda',
-      description: 'Acara resmi perayaan kelulusan setelah menyelesaikan seluruh jenjang program.',
-    },
-  ]
-
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <section className="container mx-auto px-4 py-16 md:py-24">
-        <div className="flex flex-col lg:flex-row items-center gap-12">
+      {/* ── Hero ── */}
+      <section className="container mx-auto px-4 py-14 md:py-24">
+        <div className="flex flex-col gap-10 lg:flex-row lg:items-center lg:gap-16">
           <motion.div
-            initial={{ opacity: 0, x: -30 }}
+            initial={{ opacity: 0, x: -24 }}
             animate={{ opacity: 1, x: 0 }}
-            className="flex-1 space-y-6 text-center lg:text-left"
+            transition={{ duration: 0.45 }}
+            className="flex-1 space-y-5"
           >
             <Badge
-              variant="secondary"
-              className="px-4 py-1.5 text-sm font-medium bg-green-100 text-green-700 hover:bg-green-100 border-none rounded-full"
+              variant="outline"
+              className="border-primary bg-primary/5 px-3 py-1 text-[10px] text-primary md:text-xs"
             >
-              Yanbu'a Islami
+              Yanbu&apos;a Islami
             </Badge>
-            <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight leading-tight">
-              Informasi <br />
-              <span className="text-green-600">Pendaftaran</span> <br />
-              RTQ Al-Hikmah
+
+            <h1 className="text-3xl font-extrabold tracking-tight md:text-5xl lg:text-6xl">
+              Informasi Pendaftaran <span className="text-primary block mt-1">RTQ Al-Hikmah</span>
             </h1>
-            <p className="text-lg text-muted-foreground max-w-lg mx-auto lg:mx-0">
-              Bimbingan membaca Al-Qur'an untuk anak usia dini dengan metode Yanbu'a yang teruji dan
-              berkualitas.
+
+            <p className="max-w-lg text-sm leading-relaxed text-muted-foreground md:text-base">
+              Bimbingan membaca Al-Qur&apos;an untuk anak usia dini dengan metode Yanbu&apos;a yang
+              teruji, bersama ustadzah berpengalaman di lingkungan belajar yang kondusif.
             </p>
+
+            {/* Single CTA — arahkan ke halaman Kontak, tidak duplikasi */}
+            <div className="flex flex-wrap gap-3 pt-1">
+              <Button asChild size="sm" className="gap-2 rounded-full px-5">
+                <Link href="/kontak">
+                  Hubungi Kami
+                  <IconArrowRight size={15} />
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="gap-2 rounded-full px-5">
+                <a href="#cara-mendaftar">Cara Mendaftar</a>
+              </Button>
+            </div>
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="flex-1 flex justify-center"
+            transition={{ duration: 0.45 }}
+            className="flex flex-1 justify-center lg:justify-end"
           >
-            <div className="relative w-full max-w-[500px] aspect-square">
+            <div className="relative aspect-square w-full max-w-[340px] md:max-w-[460px]">
               <Image
                 src="/images/hero-3.svg"
-                alt="RTQ Al-Hikmah Illustration"
+                alt="RTQ Al-Hikmah"
                 fill
-                className="object-contain"
                 priority
+                className="object-contain"
               />
             </div>
           </motion.div>
         </div>
       </section>
 
-      <section className="container mx-auto px-4 py-16 bg-muted/30 rounded-3xl">
-        <h2 className="text-3xl font-bold text-center mb-12 text-green-600">Proses Pendaftaran</h2>
-        <div className="grid md:grid-cols-3 gap-8">
-          {steps.map((step, idx) => (
-            <motion.div
-              key={idx}
-              whileHover={{ y: -5 }}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+      <Separator className="opacity-40" />
+
+      {/* ── Proses Pendaftaran ── */}
+      <section id="cara-mendaftar" className="container mx-auto px-4 py-14 md:py-20">
+        <div className="mb-10 md:mb-14">
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-widest text-primary">
+            Cara Mendaftar
+          </p>
+          <h2 className="text-2xl font-bold md:text-3xl">Proses Pendaftaran</h2>
+          <p className="mt-2 max-w-xl text-sm text-muted-foreground md:text-base">
+            Tiga langkah mudah untuk memulai perjalanan belajar Al-Qur&apos;an putra-putri Anda.
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3 md:gap-6">
+          {steps.map((step, index) => (
+            <Card
+              key={index}
+              className="group border border-border/60 shadow-none transition-all hover:border-primary/30 hover:shadow-sm"
             >
-              <Card className="h-full border-none shadow-md hover:shadow-xl transition-all duration-300">
-                <CardContent className="pt-8 text-center md:text-left">
-                  <div className="text-green-600 mb-6 flex justify-center md:justify-start">
-                    {step.icon}
-                  </div>
-                  <h3 className="text-xl font-bold mb-3">{step.title}</h3>
-                  <p className="text-muted-foreground leading-relaxed">{step.description}</p>
-                </CardContent>
-              </Card>
-            </motion.div>
+              <CardContent className="p-5 md:p-6">
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="rounded-lg bg-primary/10 p-2 text-primary">{step.icon}</div>
+                  <span className="text-3xl font-black text-muted-foreground/20 md:text-4xl">
+                    {step.number}
+                  </span>
+                </div>
+                <h3 className="mb-1.5 text-sm font-semibold md:text-base">{step.title}</h3>
+                <p className="text-xs leading-relaxed text-muted-foreground md:text-sm">
+                  {step.description}
+                </p>
+              </CardContent>
+            </Card>
           ))}
         </div>
       </section>
 
-      <section className="container mx-auto px-4 py-20">
-        <div className="bg-green-600 rounded-[2rem] p-8 md:p-16 text-center text-white shadow-2xl relative overflow-hidden">
-          <div className="relative z-10">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Butuh Bantuan?</h2>
-            <p className="text-green-50 mb-10 text-lg opacity-90">
-              Tim kami siap menjawab pertanyaan Ayah/Bunda mengenai program pendidikan.
-            </p>
-            <div className="flex flex-wrap justify-center gap-4">
-              <Button
-                asChild
-                size="lg"
-                variant="secondary"
-                className="rounded-full gap-2 px-8 h-12 shadow-lg"
-              >
-                <a href={whatsappNumber ? `https://wa.me/${whatsappNumber}` : '#'} target="_blank">
-                  <IconBrandWhatsapp size={20} />
-                  WhatsApp
-                </a>
-              </Button>
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="rounded-full gap-2 px-8 h-12 bg-transparent text-white border-white hover:bg-white hover:text-green-600 transition-colors"
-              >
-                <a href={email ? `mailto:${email}` : '#'}>
-                  <IconMail size={20} />
-                  Email
-                </a>
-              </Button>
+      {/* ── CTA Banner — arahkan ke halaman Kontak ── */}
+      <section className="container mx-auto px-4 pb-14 md:pb-20">
+        <div className="relative overflow-hidden rounded-2xl bg-primary px-6 py-10 md:px-12 md:py-14">
+          <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-2 max-w-xl">
+              <h2 className="text-xl font-bold text-primary-foreground md:text-3xl">
+                Ada Pertanyaan?
+              </h2>
+              <p className="text-sm text-primary-foreground/85 md:text-base">
+                Kunjungi halaman kontak kami untuk berkonsultasi langsung dengan ustadzah atau
+                pengurus RTQ {rtqName || 'Al-Hikmah'}.
+              </p>
             </div>
+
+            <Button
+              asChild
+              size="sm"
+              variant="secondary"
+              className="gap-2 rounded-full px-6 shrink-0"
+            >
+              <Link href="/kontak">
+                Ke Halaman Kontak
+                <IconArrowRight size={15} />
+              </Link>
+            </Button>
           </div>
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl" />
+
+          <div className="absolute -top-12 -right-12 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute -bottom-8 -left-8 h-32 w-32 rounded-full bg-white/5 blur-2xl" />
         </div>
       </section>
 
-      <section className="container mx-auto px-4 pb-24 max-w-4xl">
-        <div className="text-center mb-12">
-          <h3 className="text-3xl font-bold mb-4">Informasi Tambahan</h3>
-          <p className="text-muted-foreground">
+      <Separator className="opacity-40" />
+
+      {/* ── Informasi Tambahan ── */}
+      <section className="container mx-auto max-w-3xl px-4 py-14 md:py-20">
+        <div className="mb-10 md:mb-14">
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-widest text-primary">
+            Detail Lengkap
+          </p>
+          <h2 className="text-2xl font-bold md:text-3xl">Informasi Tambahan</h2>
+          <p className="mt-2 max-w-xl text-sm text-muted-foreground md:text-base">
             Detail mendalam mengenai kurikulum, fasilitas, dan kegiatan santri.
           </p>
         </div>
 
-        <Accordion type="single" collapsible defaultValue="item-0" className="w-full space-y-4">
+        <Accordion type="single" collapsible defaultValue="item-0" className="space-y-3">
           {infoItems.map((item, index) => (
             <AccordionItem
               key={index}
               value={`item-${index}`}
-              className="border rounded-2xl px-4 bg-card shadow-sm data-[state=open]:border-green-500/50 data-[state=open]:ring-1 data-[state=open]:ring-green-500/20 transition-all overflow-hidden"
+              className="overflow-hidden rounded-xl border border-border/60 bg-card px-4 shadow-none transition-all data-[state=open]:border-primary/40 data-[state=open]:ring-1 data-[state=open]:ring-primary/10"
             >
-              <AccordionTrigger className="hover:no-underline group py-5">
-                <div className="flex items-center gap-4 text-left">
-                  <div className="p-2.5 rounded-xl bg-green-50 text-green-600 group-data-[state=open]:bg-green-600 group-data-[state=open]:text-white transition-colors">
+              <AccordionTrigger className="py-4 hover:no-underline">
+                <div className="flex items-center gap-3">
+                  <div className="shrink-0 rounded-lg bg-primary/10 p-1.5 text-primary">
                     {item.icon}
                   </div>
-                  <span className="font-bold text-lg">{item.title}</span>
+                  <span className="text-left text-sm font-semibold md:text-base">{item.title}</span>
                 </div>
               </AccordionTrigger>
-              <AccordionContent className="pb-6 text-muted-foreground text-base leading-relaxed pl-14">
+              <AccordionContent className="pb-4 pl-10 text-xs leading-relaxed text-muted-foreground md:pl-11 md:text-sm">
                 {item.description}
               </AccordionContent>
             </AccordionItem>
@@ -242,5 +270,3 @@ const RegistrationPage = () => {
     </div>
   )
 }
-
-export default RegistrationPage

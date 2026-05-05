@@ -1,4 +1,5 @@
 'use client'
+
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -11,9 +12,7 @@ import { IconCalendarEvent, IconArrowRight } from '@tabler/icons-react'
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString)
-  return new Intl.DateTimeFormat('id-ID', {
-    dateStyle: 'long',
-  }).format(date)
+  return new Intl.DateTimeFormat('id-ID', { dateStyle: 'long' }).format(date)
 }
 
 export default function Berita() {
@@ -27,27 +26,27 @@ export default function Berita() {
   if (isLoading) return <SkeletonLoader />
 
   return (
-    <div className="container mx-auto px-4 pb-16 transition-colors duration-300">
-      {/* Header - Diselaraskan dengan gaya VisiMisi */}
-      <div className="flex flex-col items-start mb-12 space-y-4">
+    <div className="container mx-auto px-4 pb-14 md:pb-20">
+      {/* Header */}
+      <div className="flex flex-col items-start mb-8 md:mb-10 space-y-3">
         <Badge
           variant="outline"
-          className="text-primary border-primary/50 bg-primary/10 px-4 py-1 uppercase tracking-widest font-semibold"
+          className="text-primary border-primary/50 bg-primary/10 px-3 py-1 text-[10px] uppercase tracking-widest font-semibold md:text-xs"
         >
           Update Informasi
         </Badge>
-        <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">
+        <h2 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">
           Berita <span className="text-primary">Terbaru</span>
         </h2>
-        <div className="h-1.5 w-20 bg-accent rounded-full" />
-        <p className="max-w-2xl text-muted-foreground text-lg leading-relaxed">
+        <div className="h-1 w-16 bg-accent rounded-full" />
+        <p className="max-w-xl text-sm leading-relaxed text-muted-foreground md:text-base">
           Kami menyediakan berita terkini tentang program belajar, kegiatan sehari-hari, pengumuman
           penting, dan pencapaian dari Santri RTQ Al-Hikmah.
         </p>
       </div>
 
-      {/* Berita Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 lg:gap-6">
+      {/* Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {berita.slice(0, isMobile ? 3 : 6).map((item, index) => (
           <motion.div
             key={item.id}
@@ -58,8 +57,8 @@ export default function Berita() {
           >
             <Link href={`/berita/${item.id}`} className="group block h-full">
               <Card className="h-full flex flex-col overflow-hidden border border-border bg-card transition-all duration-300 hover:shadow-lg hover:border-primary/40 gap-0 py-0">
-                {/* IMAGE */}
-                <div className="relative w-full h-44 sm:h-48 overflow-hidden">
+                {/* Image */}
+                <div className="relative w-full h-40 sm:h-44 overflow-hidden">
                   <Image
                     src={item.gambar || '/placeholder.jpg'}
                     alt={item.judul}
@@ -70,31 +69,27 @@ export default function Berita() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-black/10 to-transparent" />
                 </div>
 
-                {/* CONTENT */}
-                <CardContent className="flex flex-col flex-1 p-3 md:p-4 gap-1 md:gap-3">
-                  {/* TOP */}
-                  <div className="space-y-2">
+                {/* Content */}
+                <CardContent className="flex flex-col flex-1 p-3 gap-2 md:p-4">
+                  <div className="space-y-1.5">
                     {item.kategori && (
                       <span className="inline-block text-[10px] font-semibold uppercase tracking-wide text-primary bg-primary/10 px-2 py-0.5 rounded">
                         {item.kategori.nama}
                       </span>
                     )}
-
-                    <h3 className="text-sm sm:text-base font-semibold leading-snug text-foreground line-clamp-2 group-hover:text-primary transition-colors">
+                    <h3 className="text-xs font-semibold leading-snug text-foreground line-clamp-2 group-hover:text-primary transition-colors md:text-sm">
                       {item.judul}
                     </h3>
                   </div>
 
-                  {/* FOOTER */}
-                  <div className="mt-auto flex items-center justify-between pt-3 border-t border-border/50 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1.5">
-                      <IconCalendarEvent size={14} />
+                  <div className="mt-auto flex items-center justify-between pt-2.5 border-t border-border/50 text-[10px] text-muted-foreground md:text-xs">
+                    <div className="flex items-center gap-1">
+                      <IconCalendarEvent size={12} />
                       <span>{formatDate(item.created_at)}</span>
                     </div>
-
                     <IconArrowRight
-                      size={16}
-                      className="text-primary opacity-0 translate-x-[-6px] group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300"
+                      size={14}
+                      className="text-primary opacity-0 -translate-x-1.5 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300"
                     />
                   </div>
                 </CardContent>
@@ -104,16 +99,16 @@ export default function Berita() {
         ))}
       </div>
 
-      {/* Button Lihat Semua - Menggunakan Shadcn UI Button */}
-      <div className="mt-12 flex justify-start">
+      {/* CTA */}
+      <div className="mt-10 flex justify-start">
         <Button
           asChild
-          size="lg"
-          className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all px-8 group"
+          size="sm"
+          className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm hover:shadow-md transition-all px-6 gap-2 group"
         >
           <Link href="/berita">
             Lihat Semua Berita
-            <IconArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            <IconArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
           </Link>
         </Button>
       </div>
@@ -121,30 +116,27 @@ export default function Berita() {
   )
 }
 
-// Skeleton Loader yang disesuaikan dengan Layout Baru
-const SkeletonLoader = () => {
-  return (
-    <div className="container mx-auto px-4 py-16">
-      <div className="animate-pulse space-y-4 mb-12">
-        <div className="h-6 w-32 bg-muted rounded-full"></div>
-        <div className="h-10 w-64 bg-muted rounded-md"></div>
-        <div className="h-4 w-96 bg-muted rounded-md opacity-50"></div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-        {[...Array(6)].map((_, index) => (
-          <div
-            key={index}
-            className="bg-card border border-border rounded-xl overflow-hidden flex flex-row sm:flex-col lg:flex-row h-32 sm:h-72 lg:h-32 shadow-sm"
-          >
-            <div className="w-1/3 sm:w-full lg:w-1/3 h-full sm:h-40 lg:h-full bg-muted animate-pulse"></div>
-            <div className="p-4 flex-1 space-y-3">
-              <div className="h-3 w-16 bg-muted rounded"></div>
-              <div className="h-5 w-full bg-muted rounded"></div>
-              <div className="h-5 w-2/3 bg-muted rounded"></div>
-            </div>
-          </div>
-        ))}
-      </div>
+const SkeletonLoader = () => (
+  <div className="container mx-auto px-4 pb-14 md:pb-20">
+    <div className="animate-pulse space-y-3 mb-8">
+      <div className="h-5 w-28 bg-muted rounded-full" />
+      <div className="h-8 w-52 bg-muted rounded-md" />
+      <div className="h-3 w-80 bg-muted rounded-md opacity-50" />
     </div>
-  )
-}
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      {[...Array(6)].map((_, index) => (
+        <div
+          key={index}
+          className="bg-card border border-border rounded-xl overflow-hidden shadow-sm"
+        >
+          <div className="w-full h-40 bg-muted animate-pulse" />
+          <div className="p-3 space-y-2">
+            <div className="h-3 w-14 bg-muted rounded" />
+            <div className="h-4 w-full bg-muted rounded" />
+            <div className="h-4 w-2/3 bg-muted rounded" />
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)

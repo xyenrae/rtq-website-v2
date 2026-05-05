@@ -6,11 +6,7 @@ import { motion } from 'motion/react'
 
 const sectionVariants = {
   hidden: { opacity: 0, y: -20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5 },
-  },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
 }
 
 export default function KenaliKami() {
@@ -36,16 +32,23 @@ export default function KenaliKami() {
 
   return (
     <motion.div
-      className="flex flex-col lg:flex-row w-full gap-8 px-4 py-8 sm:px-0 sm:container"
+      className="container mx-auto flex flex-col lg:flex-row w-full gap-8 px-4 py-14 md:py-20"
       variants={sectionVariants}
       initial="hidden"
       animate="visible"
     >
       {/* Text Section */}
-      <div className="flex-1 flex flex-col gap-6">
-        <p className="text-2xl lg:text-3xl font-semibold text-gray-800">Kenali Kami Lebih Dekat</p>
+      <div className="flex-1 flex flex-col gap-5">
+        <div>
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-widest text-green-600">
+            Profil Lembaga
+          </p>
+          <h2 className="text-2xl font-bold tracking-tight text-gray-800 md:text-3xl">
+            Kenali Kami Lebih Dekat
+          </h2>
+        </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           {items.map((item, index) => (
             <div key={index} className="border rounded-lg overflow-hidden transition-all shadow-sm">
               <button
@@ -55,18 +58,17 @@ export default function KenaliKami() {
                 }`}
               >
                 <h3
-                  className={`text-lg lg:text-xl font-medium text-start ${
+                  className={`text-sm font-semibold text-start md:text-base ${
                     activeIndex === index ? 'text-white' : 'text-gray-800'
                   }`}
                 >
                   {item.title}
                 </h3>
-
                 <IconChevronDown
-                  className={`text-gray-600 transition-transform duration-300 ${
+                  className={`shrink-0 ml-3 text-gray-600 transition-transform duration-300 ${
                     activeIndex === index ? 'rotate-180' : ''
                   }`}
-                  size={24}
+                  size={18}
                   stroke={2}
                 />
               </button>
@@ -77,7 +79,7 @@ export default function KenaliKami() {
                 }`}
               >
                 <div className="p-4">
-                  <p className="text-gray-600 leading-relaxed">{item.content}</p>
+                  <p className="text-xs leading-relaxed text-gray-600 md:text-sm">{item.content}</p>
                 </div>
               </div>
             </div>
@@ -87,12 +89,12 @@ export default function KenaliKami() {
 
       {/* Image Section */}
       <div className="flex-1 order-1 lg:order-2 flex justify-center items-center">
-        <div className="relative w-[300px] h-[300px] sm:w-[400px] sm:h-[400px] lg:w-[500px] lg:h-[500px]">
+        <div className="relative w-[260px] h-[260px] sm:w-[360px] sm:h-[360px] lg:w-[460px] lg:h-[460px]">
           <Image
             src="/images/hero-3.svg"
             alt="Hero Image"
-            width={500}
-            height={500}
+            width={460}
+            height={460}
             className="w-full h-full object-contain"
             priority
           />

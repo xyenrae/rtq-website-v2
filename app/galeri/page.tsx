@@ -11,28 +11,29 @@ import {
   IconShare3,
   IconPhoto,
 } from '@tabler/icons-react'
+
 import { useGaleri, GaleriImage } from '@/hooks/santri/galeri/useGaleri'
 import { useGaleriKategori } from '@/hooks/santri/galeri/useGaleriKategori'
+
 import SkeletonGaleri from '@/components/skeleton/galeri/SkeletonGaleri'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 
-// ── Pure CSS spinner – zero JS overhead ──────────────────────────────────────
 function LoadMoreSpinner() {
   return (
     <div className="flex items-center justify-center gap-3 py-4">
-      <span className="h-4 w-4 rounded-full border-2 border-muted border-t-foreground/60 animate-spin" />
-      <span className="text-sm font-medium text-muted-foreground">Memuat lebih banyak…</span>
+      <span className="h-4 w-4 animate-spin rounded-full border-2 border-muted border-t-foreground/60" />
+      <span className="text-xs text-muted-foreground">Memuat lebih banyak…</span>
     </div>
   )
 }
 
-// ── Single gallery card (memoised) ───────────────────────────────────────────
-const GalleryCard = ({
+function GalleryCard({
   img,
   priority,
   onClick,
@@ -40,47 +41,48 @@ const GalleryCard = ({
   img: GaleriImage
   priority: boolean
   onClick: (img: GaleriImage) => void
-}) => {
+}) {
+  const [imgError, setImgError] = useState(false)
   const ratio = img.width && img.height ? img.width / img.height : 4 / 3
-  // Taller images (portrait) span 2 rows in the masonry-like grid
   const tall = ratio < 0.85
+
+  if (imgError) return null
 
   return (
     <div
-      className={`relative overflow-hidden rounded-xl cursor-pointer group bg-muted${tall ? ' row-span-2' : ''}`}
       onClick={() => onClick(img)}
+      className={`group relative cursor-pointer overflow-hidden rounded-xl bg-muted ${tall ? 'row-span-2' : ''}`}
     >
       <Image
         src={img.image_url}
         alt={img.judul ?? 'Foto galeri'}
         fill
-        className="object-cover group-hover:scale-105 transition-transform duration-300"
-        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-        loading={priority ? 'eager' : 'lazy'}
         quality={75}
+        loading={priority ? 'eager' : 'lazy'}
+        sizes="(max-width:640px) 50vw, (max-width:1024px) 33vw, 25vw"
+        className="object-cover transition-transform duration-300 group-hover:scale-105"
+        onError={() => setImgError(true)}
       />
-      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300" />
+      <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/40" />
       {img.judul && (
-        <div className="absolute bottom-0 left-0 right-0 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-          <p className="text-white text-sm font-medium line-clamp-2">{img.judul}</p>
+        <div className="absolute inset-x-0 bottom-0 translate-y-full p-3 transition-transform duration-300 group-hover:translate-y-0">
+          <p className="line-clamp-2 text-xs font-medium text-white md:text-sm">{img.judul}</p>
         </div>
       )}
     </div>
   )
 }
 
-const GalleryCardMemo = GalleryCard // already stable via parent memo pattern
-
-// ── Main page ─────────────────────────────────────────────────────────────────
 export default function GaleriPage() {
   const [activeKategoriId, setActiveKategoriId] = useState<string | null>(null)
   const [selectedImage, setSelectedImage] = useState<GaleriImage | null>(null)
+  const [heroError, setHeroError] = useState(false)
 
   const { galeri, loading, loadingMore, hasMore, loadMore } = useGaleri(activeKategoriId)
   const { kategori, loading: loadingKategori } = useGaleriKategori()
 
-  // Sentinel for infinite scroll
   const sentinelRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     if (!hasMore) return
     const el = sentinelRef.current
@@ -95,14 +97,15 @@ export default function GaleriPage() {
     return () => observer.disconnect()
   }, [hasMore, loadMore])
 
-  // Keyboard nav
   const currentIndex = useMemo(
     () => galeri.findIndex((img) => img.id === selectedImage?.id),
     [galeri, selectedImage]
   )
+
   const goNext = useCallback(() => {
     if (currentIndex < galeri.length - 1) setSelectedImage(galeri[currentIndex + 1])
   }, [currentIndex, galeri])
+
   const goPrev = useCallback(() => {
     if (currentIndex > 0) setSelectedImage(galeri[currentIndex - 1])
   }, [currentIndex, galeri])
@@ -147,9 +150,7 @@ export default function GaleriPage() {
           text: selectedImage.deskripsi ?? 'Lihat foto ini dari galeri kami.',
           url: selectedImage.image_url,
         })
-      } catch {
-        /* cancelled */
-      }
+      } catch {}
     } else {
       await navigator.clipboard.writeText(selectedImage.image_url)
       toast.success('Link foto disalin ke clipboard')
@@ -158,174 +159,152 @@ export default function GaleriPage() {
 
   if (loading || loadingKategori) return <SkeletonGaleri />
 
+  const heroImageUrl = galeri.find((img) => img.image_url)?.image_url
+
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* ── Hero ── */}
-      <section className="relative h-[60vh] flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 z-0">
-          {galeri[0]?.image_url ? (
-            <Image
-              src={galeri[0].image_url}
-              alt="Hero Galeri"
-              fill
-              className="object-cover"
-              priority
-              sizes="100vw"
-              quality={60}
-            />
-          ) : (
-            <div className="w-full h-full bg-muted" />
-          )}
-          <div className="absolute inset-0 bg-black/65" />
-        </div>
-        <div className="relative z-10 text-center space-y-4 px-4 max-w-3xl">
-          <Badge variant="outline" className="text-white border-white/30 px-4 py-1">
-            Dokumentasi Lembaga
-          </Badge>
-          <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight">
-            Galeri Kegiatan
-          </h1>
-          <p className="text-lg text-gray-300">
-            Jejak kenangan dan cerita inspiratif setiap momen berharga santri.
-          </p>
-          <Button
-            size="lg"
-            className="rounded-full px-8"
-            onClick={() =>
-              document.getElementById('gallery-grid')?.scrollIntoView({ behavior: 'smooth' })
-            }
-          >
-            Jelajahi Momen
-          </Button>
+      {/* Hero */}
+      <section className="relative overflow-hidden">
+        {/* Tinggi hero: auto di mobile mengikuti konten, fixed di desktop */}
+        <div className="relative flex min-h-[340px] items-center justify-center md:min-h-[60vh]">
+          {/* Background image */}
+          <div className="absolute inset-0">
+            {heroImageUrl && !heroError ? (
+              <Image
+                fill
+                priority
+                quality={60}
+                src={heroImageUrl}
+                alt="Hero Galeri"
+                sizes="100vw"
+                className="object-cover object-center"
+                onError={() => setHeroError(true)}
+              />
+            ) : (
+              <div className="h-full w-full bg-gradient-to-br from-muted to-muted/60" />
+            )}
+            <div className="absolute inset-0 bg-black/65" />
+          </div>
+
+          {/* Konten hero — padding vertikal mengontrol tinggi di mobile */}
+          <div className="relative z-10 w-full max-w-3xl space-y-3 px-4 py-16 text-center md:space-y-4 md:py-0">
+            <Badge
+              variant="outline"
+              className="border-white/30 px-3 py-1 text-[10px] text-white md:text-xs"
+            >
+              Dokumentasi Lembaga
+            </Badge>
+
+            <h1 className="text-2xl font-extrabold tracking-tight text-white md:text-6xl">
+              Galeri Kegiatan
+            </h1>
+
+            <p className="mx-auto max-w-2xl text-xs leading-relaxed text-gray-300 md:text-xl">
+              Jejak kenangan dan cerita inspiratif setiap momen berharga santri.
+            </p>
+
+            <div className="pt-1 md:pt-2">
+              <Button
+                size="sm"
+                className="rounded-full px-5 md:size-lg md:px-8"
+                onClick={() =>
+                  document.getElementById('gallery-grid')?.scrollIntoView({ behavior: 'smooth' })
+                }
+              >
+                Jelajahi Momen
+              </Button>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* ── Grid ── */}
-      <section id="gallery-grid" className="container mx-auto px-4 py-12">
-        {/* Filter */}
-        <div className="flex flex-wrap items-center gap-2 mb-8">
-          {[{ id: null, nama: 'Semua' }, ...kategori].map((cat) => (
-            <button
-              key={cat.id ?? '__all__'}
-              onClick={() => setActiveKategoriId(cat.id)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                activeKategoriId === cat.id
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'bg-background text-foreground border-border hover:border-primary'
-              }`}
-            >
-              {cat.nama}
-            </button>
-          ))}
+      {/* Gallery */}
+      <section id="gallery-grid" className="container mx-auto px-4 py-8 md:py-12">
+        {/* Filter kategori — mobile: horizontal scroll, desktop: wrap */}
+        <div className="mb-8">
+          <div className="md:hidden overflow-x-auto scrollbar-none">
+            <div className="flex gap-1.5 w-max pb-1">
+              {[{ id: null, nama: 'Semua' }, ...kategori].map((cat) => (
+                <button
+                  key={cat.id ?? '__all__'}
+                  onClick={() => setActiveKategoriId(cat.id)}
+                  className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                    activeKategoriId === cat.id
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                  }`}
+                >
+                  {cat.nama}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="hidden md:flex flex-wrap gap-2">
+            {[{ id: null, nama: 'Semua' }, ...kategori].map((cat) => (
+              <button
+                key={cat.id ?? '__all__'}
+                onClick={() => setActiveKategoriId(cat.id)}
+                className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
+                  activeKategoriId === cat.id
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border bg-background text-foreground hover:border-primary'
+                }`}
+              >
+                {cat.nama}
+              </button>
+            ))}
+          </div>
         </div>
 
+        {/* Empty state */}
         {galeri.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-muted-foreground gap-3">
-            <IconPhoto size={40} strokeWidth={1.2} />
-            <p className="text-base">Belum ada foto di kategori ini.</p>
+          <div className="flex flex-col items-center gap-3 py-20 text-muted-foreground">
+            <IconPhoto size={36} strokeWidth={1.2} />
+            <p className="text-sm md:text-base">Belum ada foto di kategori ini.</p>
           </div>
         ) : (
-          /**
-           * CSS Grid auto-rows masonry alternative.
-           * grid-rows-[masonry] is still experimental; instead we use a
-           * multi-column grid where tall images span 2 rows via row-span-2.
-           * Row height = 200px → portrait cards ≈ 400px, landscape ≈ 200px.
-           */
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 auto-rows-[200px] gap-3">
+          <div className="grid auto-rows-[180px] grid-cols-2 gap-3 sm:auto-rows-[200px] sm:grid-cols-3 lg:grid-cols-4">
             {galeri.map((img, i) => (
-              <GalleryCardMemo key={img.id} img={img} priority={i < 8} onClick={setSelectedImage} />
+              <GalleryCard key={img.id} img={img} priority={i < 8} onClick={setSelectedImage} />
             ))}
           </div>
         )}
 
-        {/* Infinite scroll sentinel */}
-        <div ref={sentinelRef} className="flex justify-center mt-10 min-h-[60px]">
+        <div ref={sentinelRef} className="mt-10 flex min-h-[60px] justify-center">
           {loadingMore && <LoadMoreSpinner />}
         </div>
       </section>
 
-      {/* ── Lightbox ── */}
+      {/* Lightbox dialog */}
       <Dialog open={!!selectedImage} onOpenChange={(open) => !open && setSelectedImage(null)}>
         <DialogContent
-          className="
-      p-0 gap-0 overflow-hidden
-      mx-4 sm:mx-auto
-      w-[calc(100%-2rem)] sm:w-full sm:max-w-4xl
-      max-h-[88dvh]
-      rounded-2xl border border-border/60
-      bg-card shadow-2xl
-      flex flex-col
-    "
           showCloseButton={false}
+          className="mx-4 flex max-h-[88dvh] w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden rounded-2xl border border-border/60 bg-card p-0 shadow-2xl sm:mx-auto sm:w-full sm:max-w-4xl"
         >
           {selectedImage && (
             <>
-              {/* Preload prev/next – warms browser cache sebelum diklik */}
-              {currentIndex > 0 && (
-                <link rel="preload" as="image" href={galeri[currentIndex - 1].image_url} />
-              )}
-              {currentIndex < galeri.length - 1 && (
-                <link rel="preload" as="image" href={galeri[currentIndex + 1].image_url} />
-              )}
+              <LightboxImage
+                src={selectedImage.image_url}
+                alt={selectedImage.judul ?? 'Preview'}
+                currentIndex={currentIndex}
+                total={galeri.length}
+                onNext={goNext}
+                onPrev={goPrev}
+              />
 
-              {/* Image */}
-              <div className="relative w-full bg-black overflow-hidden">
-                <div className="relative w-full aspect-[4/3] sm:aspect-[16/9] md:aspect-[16/8]">
-                  <Image
-                    key={selectedImage.image_url}
-                    src={selectedImage.image_url}
-                    alt={selectedImage.judul ?? 'Preview'}
-                    fill
-                    className="object-contain"
-                    sizes="(max-width: 768px) 95vw, 80vw"
-                    priority
-                    quality={85}
-                  />
-                </div>
-
-                <DialogClose asChild>
-                  <button className="absolute top-3 right-3 z-20 p-1.5 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors">
-                    <IconX size={15} />
-                  </button>
-                </DialogClose>
-
-                {currentIndex > 0 && (
-                  <button
-                    onClick={goPrev}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-black/40 hover:bg-black/65 text-white transition-colors"
-                    aria-label="Foto sebelumnya"
-                  >
-                    <IconChevronLeft size={18} />
-                  </button>
-                )}
-                {currentIndex < galeri.length - 1 && (
-                  <button
-                    onClick={goNext}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-black/40 hover:bg-black/65 text-white transition-colors"
-                    aria-label="Foto berikutnya"
-                  >
-                    <IconChevronRight size={18} />
-                  </button>
-                )}
-
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-black/50 text-white/70 text-xs tabular-nums select-none">
-                  {currentIndex + 1} / {galeri.length}
-                </div>
-              </div>
-
-              {/* Info */}
-              <div className="flex flex-col px-5 py-4 gap-3">
+              <div className="flex flex-col gap-3 px-5 py-4">
                 {selectedImage.judul ? (
-                  <h3 className="font-semibold text-base text-foreground leading-snug line-clamp-2">
+                  <h3 className="line-clamp-2 text-sm font-semibold leading-snug md:text-base">
                     {selectedImage.judul}
                   </h3>
                 ) : (
-                  <p className="text-muted-foreground text-sm italic">Tanpa judul</p>
+                  <p className="text-xs italic text-muted-foreground">Tanpa judul</p>
                 )}
 
                 {selectedImage.deskripsi && (
                   <ScrollArea className="max-h-20">
-                    <p className="text-muted-foreground text-sm leading-relaxed pr-2">
+                    <p className="pr-2 text-xs leading-relaxed text-muted-foreground md:text-sm">
                       {selectedImage.deskripsi}
                     </p>
                   </ScrollArea>
@@ -333,8 +312,8 @@ export default function GaleriPage() {
 
                 <Separator />
 
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <span className="flex items-center gap-1.5 text-muted-foreground text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <IconCalendar size={13} />
                     {new Date(selectedImage.created_at).toLocaleDateString('id-ID', {
                       day: 'numeric',
@@ -342,20 +321,21 @@ export default function GaleriPage() {
                       year: 'numeric',
                     })}
                   </span>
+
                   <div className="flex items-center gap-2">
                     <Button
-                      variant="outline"
                       size="sm"
-                      className="rounded-full gap-1.5 h-8 px-4 text-xs"
+                      variant="outline"
                       onClick={handleShare}
+                      className="h-8 gap-1.5 rounded-full px-4 text-xs"
                     >
                       <IconShare3 size={13} />
                       Bagikan
                     </Button>
                     <Button
                       size="sm"
-                      className="rounded-full gap-1.5 h-8 px-4 text-xs"
                       onClick={handleDownload}
+                      className="h-8 gap-1.5 rounded-full px-4 text-xs"
                     >
                       <IconDownload size={13} />
                       Unduh
@@ -367,6 +347,80 @@ export default function GaleriPage() {
           )}
         </DialogContent>
       </Dialog>
+    </div>
+  )
+}
+
+function LightboxImage({
+  src,
+  alt,
+  currentIndex,
+  total,
+  onNext,
+  onPrev,
+}: {
+  src: string
+  alt: string
+  currentIndex: number
+  total: number
+  onNext: () => void
+  onPrev: () => void
+}) {
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    setError(false)
+  }, [src])
+
+  return (
+    <div className="relative overflow-hidden bg-black">
+      <div className="relative aspect-[4/3] w-full sm:aspect-[16/9] md:aspect-[16/8]">
+        {error ? (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-white/40">
+            <IconPhoto size={36} strokeWidth={1.2} />
+            <p className="text-xs">Gambar tidak tersedia</p>
+          </div>
+        ) : (
+          <Image
+            fill
+            priority
+            quality={85}
+            src={src}
+            alt={alt}
+            sizes="(max-width:768px) 95vw, 80vw"
+            className="object-contain"
+            onError={() => setError(true)}
+          />
+        )}
+      </div>
+
+      <DialogClose asChild>
+        <button className="absolute top-3 right-3 z-20 rounded-full bg-black/50 p-1.5 text-white transition-colors hover:bg-black/70">
+          <IconX size={15} />
+        </button>
+      </DialogClose>
+
+      {currentIndex > 0 && (
+        <button
+          onClick={onPrev}
+          className="absolute left-3 top-1/2 z-20 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white transition-colors hover:bg-black/65"
+        >
+          <IconChevronLeft size={18} />
+        </button>
+      )}
+
+      {currentIndex < total - 1 && (
+        <button
+          onClick={onNext}
+          className="absolute right-3 top-1/2 z-20 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white transition-colors hover:bg-black/65"
+        >
+          <IconChevronRight size={18} />
+        </button>
+      )}
+
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/50 px-3 py-0.5 text-[10px] text-white/70 md:text-xs">
+        {currentIndex + 1} / {total}
+      </div>
     </div>
   )
 }
