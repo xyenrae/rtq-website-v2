@@ -502,7 +502,7 @@ export default function GaleriPage() {
           data={filteredGaleris}
           columns={columns}
           rowKey="id"
-          pageSize={12}
+          pageSize={10}
           defaultSort={{ key: 'created_at', direction: 'desc' }}
           searchFields={['judul', 'deskripsi']}
           searchPlaceholder="Cari foto berdasarkan judul atau deskripsi..."

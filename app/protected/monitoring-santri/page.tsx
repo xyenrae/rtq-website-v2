@@ -34,6 +34,27 @@ import type { SantriDenganRekomendasi, SantriFormData, MonitoringStats } from '@
 
 const JILID_LABELS = ['Jilid 0', 'Jilid 1', 'Jilid 2', 'Jilid 3', 'Jilid 4', 'Jilid 5', 'Jilid 6']
 
+type SortField = 'nama' | 'jilid_saat_ini' | 'status_rekomendasi' | 'created_at'
+
+type DurasiKey =
+  | 'durasi_jilid_0'
+  | 'durasi_jilid_1'
+  | 'durasi_jilid_2'
+  | 'durasi_jilid_3'
+  | 'durasi_jilid_4'
+  | 'durasi_jilid_5'
+  | 'durasi_jilid_6'
+
+const DURASI_KEYS: DurasiKey[] = [
+  'durasi_jilid_0',
+  'durasi_jilid_1',
+  'durasi_jilid_2',
+  'durasi_jilid_3',
+  'durasi_jilid_4',
+  'durasi_jilid_5',
+  'durasi_jilid_6',
+]
+
 const EMPTY_FORM: SantriFormData = {
   nama: '',
   tanggal_lahir: '',
@@ -384,17 +405,21 @@ function DetailModal({
   santri: SantriDenganRekomendasi
   onClose: () => void
 }) {
-  const [riwayat, setRiwayat] = useState<Record<string, unknown>[]>([])
-
+  type RiwayatItem = {
+    status: 'BBK' | 'TBBK'
+    classified_at: string
+    probabilitas: number
+  }
+  const [riwayat, setRiwayat] = useState<RiwayatItem[]>([])
   useEffect(() => {
     fetchRiwayatRekomendasi(santri.id)
-      .then((data) => setRiwayat(data.slice(0, 5)))
+      .then((data) => setRiwayat((data as RiwayatItem[]).slice(0, 5)))
       .catch(() => {})
   }, [santri.id])
 
-  const durations = [0, 1, 2, 3, 4, 5, 6].map((j) => ({
-    label: `Jilid ${j}`,
-    value: (santri as Record<string, unknown>)[`durasi_jilid_${j}`] as number | null,
+  const durations = DURASI_KEYS.map((key, index) => ({
+    label: `Jilid ${index}`,
+    value: santri[key],
   }))
 
   return (
@@ -515,7 +540,7 @@ export default function MonitoringSantriPage() {
   const [showForm, setShowForm] = useState(false)
   const [editSantri, setEditSantri] = useState<SantriDenganRekomendasi | null>(null)
   const [detailSantri, setDetailSantri] = useState<SantriDenganRekomendasi | null>(null)
-  const [sortField, setSortField] = useState('created_at')
+  const [sortField, setSortField] = useState<SortField>('created_at')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
   const loadData = useCallback(async () => {
@@ -556,7 +581,7 @@ export default function MonitoringSantriPage() {
     }
   }
 
-  function handleSort(field: string) {
+  function handleSort(field: SortField) {
     if (sortField === field) {
       setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
     } else {
@@ -578,7 +603,7 @@ export default function MonitoringSantriPage() {
       return sortDir === 'asc' ? cmp : -cmp
     })
 
-  function SortIcon({ field }: { field: string }) {
+  function SortIcon({ field }: { field: SortField }) {
     if (sortField !== field)
       return <IconChevronDown size={12} className="text-muted-foreground opacity-40" />
     return sortDir === 'asc' ? (

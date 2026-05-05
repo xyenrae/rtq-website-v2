@@ -27,21 +27,68 @@ import {
   Cell,
   Legend,
 } from 'recharts'
-import type { StatusRekomendasi } from '@/lib/types'
-import { RekomendasiRow, StatistikRekomendasi, fetchHasilRekomendasiList, fetchStatistikRekomendasi, reklasifikasiSemua } from '@/lib/hasil-rekomendasi'
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+import type { StatusRekomendasi } from '@/lib/types'
+import {
+  RekomendasiRow,
+  StatistikRekomendasi,
+  fetchHasilRekomendasiList,
+  fetchStatistikRekomendasi,
+  reklasifikasiSemua,
+} from '@/lib/hasil-rekomendasi'
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+type DurasiKey =
+  | 'durasi_jilid_0'
+  | 'durasi_jilid_1'
+  | 'durasi_jilid_2'
+  | 'durasi_jilid_3'
+  | 'durasi_jilid_4'
+  | 'durasi_jilid_5'
+  | 'durasi_jilid_6'
+
+const DURASI_KEYS: DurasiKey[] = [
+  'durasi_jilid_0',
+  'durasi_jilid_1',
+  'durasi_jilid_2',
+  'durasi_jilid_3',
+  'durasi_jilid_4',
+  'durasi_jilid_5',
+  'durasi_jilid_6',
+]
+
+function getDurasiValues(row: RekomendasiRow): number[] {
+  return DURASI_KEYS.map((key) => row[key]).filter((value): value is number => value !== null)
+}
+
+function getDurasiStats(row: RekomendasiRow) {
+  const durasis = getDurasiValues(row)
+
+  const total = durasis.reduce((acc, value) => acc + value, 0)
+  const rata = durasis.length ? total / durasis.length : 0
+
+  return {
+    durasis,
+    total,
+    rata,
+  }
+}
+
+// ─── Sub-components ────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: StatusRekomendasi | null }) {
-  if (!status)
+  if (!status) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
         Belum
       </span>
     )
+  }
+
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
         status === 'BBK'
           ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
           : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
@@ -63,9 +110,9 @@ function AlasanModal({
   onClose: () => void
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl">
-        <div className="flex items-center justify-between p-5 border-b border-border">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl">
+        <div className="flex items-center justify-between border-b border-border p-5">
           <div className="flex items-center gap-2">
             <IconBrain size={18} className="text-primary" />
             <div>
@@ -73,12 +120,14 @@ function AlasanModal({
               <p className="text-xs text-muted-foreground">{nama}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-muted rounded-lg">
+
+          <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-muted">
             <IconX size={15} className="text-muted-foreground" />
           </button>
         </div>
+
         <div className="p-5">
-          <pre className="text-xs text-foreground/80 bg-muted/40 rounded-lg p-4 whitespace-pre-wrap font-mono leading-relaxed">
+          <pre className="whitespace-pre-wrap rounded-lg bg-muted/40 p-4 font-mono text-xs leading-relaxed text-foreground/80">
             {alasan}
           </pre>
         </div>
@@ -96,43 +145,51 @@ function CustomTooltip({
   payload?: { name: string; value: number; fill: string }[]
   label?: string
 }) {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-card border border-border rounded-lg p-3 shadow-lg text-xs">
-        <p className="font-semibold text-foreground mb-1">{label}</p>
-        {payload.map((p, i) => (
-          <p key={i} style={{ color: p.fill }} className="font-medium">
-            {p.name}: {p.value}
-          </p>
-        ))}
-      </div>
-    )
-  }
-  return null
+  if (!active || !payload?.length) return null
+
+  return (
+    <div className="rounded-lg border border-border bg-card p-3 text-xs shadow-lg">
+      <p className="mb-1 font-semibold text-foreground">{label}</p>
+
+      {payload.map((item, i) => (
+        <p key={i} className="font-medium" style={{ color: item.fill }}>
+          {item.name}: {item.value}
+        </p>
+      ))}
+    </div>
+  )
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// ─── Main Page ─────────────────────────────────────────────────────────────
 
 export default function HasilRekomendasiPage() {
   const [data, setData] = useState<RekomendasiRow[]>([])
   const [statistik, setStatistik] = useState<StatistikRekomendasi | null>(null)
+
   const [loading, setLoading] = useState(true)
   const [reklasLoading, setReklasLoading] = useState(false)
+
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<StatusRekomendasi | ''>('')
-  const [showAlasan, setShowAlasan] = useState<{ alasan: string; nama: string } | null>(null)
+
+  const [showAlasan, setShowAlasan] = useState<{
+    alasan: string
+    nama: string
+  } | null>(null)
 
   const loadData = useCallback(async () => {
     setLoading(true)
+
     try {
       const [list, stats] = await Promise.all([
         fetchHasilRekomendasiList(),
         fetchStatistikRekomendasi(),
       ])
+
       setData(list)
       setStatistik(stats)
-    } catch (err: unknown) {
-      toast.error((err as Error).message ?? 'Gagal memuat data')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Gagal memuat data')
     } finally {
       setLoading(false)
     }
@@ -142,23 +199,28 @@ export default function HasilRekomendasiPage() {
     loadData()
   }, [loadData])
 
-  // Re-fetch saat filter berubah
   useEffect(() => {
     if (loading) return
-    fetchHasilRekomendasiList({ status: filterStatus, search })
+
+    fetchHasilRekomendasiList({
+      status: filterStatus,
+      search,
+    })
       .then(setData)
       .catch(() => {})
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterStatus, search])
+  }, [filterStatus, search, loading])
 
   async function handleReklasifikasiSemua() {
     setReklasLoading(true)
+
     try {
       const { berhasil } = await reklasifikasiSemua()
+
       toast.success(`Reklasifikasi selesai: ${berhasil} santri berhasil diproses`)
-      loadData()
-    } catch (err: unknown) {
-      toast.error((err as Error).message ?? 'Gagal reklasifikasi')
+
+      await loadData()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Gagal reklasifikasi')
     } finally {
       setReklasLoading(false)
     }
@@ -167,40 +229,54 @@ export default function HasilRekomendasiPage() {
   function handleExport() {
     const rows = [
       ['No', 'Nama', 'Jilid', 'Taskih', 'Status', 'Probabilitas', 'Tanggal Klasifikasi'],
-      ...data.map((r, i) => {
-        const durasis = [0, 1, 2, 3, 4, 5, 6]
-          .map((j) => (r as Record<string, number | null>)[`durasi_jilid_${j}`])
-          .filter((d): d is number => d !== null)
-        const total = durasis.reduce((a, b) => a + b, 0)
-        const rata = durasis.length > 0 ? (total / durasis.length).toFixed(1) : '0'
+
+      ...data.map((row, i) => {
+        const { total, rata } = getDurasiStats(row)
+
         return [
           i + 1,
-          r.nama,
-          r.jilid_saat_ini,
-          r.total_pengulangan_taskih,
-          r.status_rekomendasi ?? '-',
-          r.probabilitas ? `${Math.round(r.probabilitas * 100)}%` : '-',
-          r.classified_at ? new Date(r.classified_at).toLocaleDateString('id-ID') : '-',
+          row.nama,
+          row.jilid_saat_ini,
+          row.total_pengulangan_taskih,
+          row.status_rekomendasi ?? '-',
+          row.probabilitas ? `${Math.round(row.probabilitas * 100)}%` : '-',
+          row.classified_at ? new Date(row.classified_at).toLocaleDateString('id-ID') : '-',
           `Total: ${total.toFixed(1)} bln`,
-          `Rata: ${rata} bln`,
+          `Rata: ${rata.toFixed(1)} bln`,
         ]
       }),
     ]
-    const csv = rows.map((r) => r.join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
+
+    const csv = rows.map((row) => row.join(',')).join('\n')
+
+    const blob = new Blob([csv], {
+      type: 'text/csv',
+    })
+
     const url = URL.createObjectURL(blob)
+
     const a = document.createElement('a')
     a.href = url
     a.download = `rekomendasi-${new Date().toISOString().slice(0, 10)}.csv`
     a.click()
+
     URL.revokeObjectURL(url)
+
     toast.success('Laporan berhasil diekspor')
   }
 
   const pieData = statistik
     ? [
-        { name: 'BBK', value: statistik.bbk, color: '#ef4444' },
-        { name: 'TBBK', value: statistik.tbbk, color: '#10b981' },
+        {
+          name: 'BBK',
+          value: statistik.bbk,
+          color: '#ef4444',
+        },
+        {
+          name: 'TBBK',
+          value: statistik.tbbk,
+          color: '#10b981',
+        },
       ]
     : []
 
@@ -418,38 +494,42 @@ export default function HasilRekomendasiPage() {
                   </tr>
                 ) : (
                   data.map((row, idx) => {
-                    const durasis = [0, 1, 2, 3, 4, 5, 6]
-                      .map((j) => (row as Record<string, number | null>)[`durasi_jilid_${j}`])
-                      .filter((d): d is number => d !== null)
-                    const totalDurasi = durasis.reduce((a, b) => a + b, 0)
-                    const rataDurasi = durasis.length > 0 ? totalDurasi / durasis.length : 0
+                    const { total, rata } = getDurasiStats(row)
 
                     return (
-                      <tr key={row.id} className="hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-3 text-muted-foreground text-xs">{idx + 1}</td>
+                      <tr key={row.id} className="transition-colors hover:bg-muted/30">
+                        <td className="px-4 py-3 text-xs text-muted-foreground">{idx + 1}</td>
+
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
                               {row.nama.charAt(0)}
                             </div>
+
                             <span className="font-medium text-foreground">{row.nama}</span>
                           </div>
                         </td>
+
                         <td className="px-4 py-3 text-sm text-foreground">
                           {row.jilid_saat_ini === 7 ? 'Al-Quran' : `Jilid ${row.jilid_saat_ini}`}
                         </td>
+
                         <td className="px-4 py-3 text-sm text-foreground">
-                          {totalDurasi.toFixed(1)} bln
+                          {total.toFixed(1)} bln
                         </td>
+
                         <td className="px-4 py-3 text-sm text-foreground">
-                          {rataDurasi > 0 ? `${rataDurasi.toFixed(1)} bln` : '—'}
+                          {rata > 0 ? `${rata.toFixed(1)} bln` : '—'}
                         </td>
+
                         <td className="px-4 py-3 text-sm font-medium text-foreground">
                           {row.total_pengulangan_taskih}x
                         </td>
+
                         <td className="px-4 py-3">
                           <StatusBadge status={row.status_rekomendasi} />
                         </td>
+
                         <td className="px-4 py-3 text-xs text-muted-foreground">
                           {row.classified_at
                             ? new Date(row.classified_at).toLocaleDateString('id-ID', {
@@ -459,19 +539,23 @@ export default function HasilRekomendasiPage() {
                               })
                             : '—'}
                         </td>
+
                         <td className="px-4 py-3">
                           {row.alasan_rekomendasi ? (
                             <button
                               onClick={() =>
-                                setShowAlasan({ alasan: row.alasan_rekomendasi!, nama: row.nama })
+                                setShowAlasan({
+                                  alasan: row.alasan_rekomendasi!,
+                                  nama: row.nama,
+                                })
                               }
-                              className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                              className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
                             >
                               <IconInfoCircle size={13} />
                               Lihat Alasan
                             </button>
                           ) : (
-                            <span className="text-muted-foreground text-xs">—</span>
+                            <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </td>
                       </tr>

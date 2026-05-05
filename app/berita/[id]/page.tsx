@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'motion/react'
@@ -50,30 +50,31 @@ const estimateReadTime = (content: string): number => {
   return Math.ceil(words / wordsPerMinute)
 }
 
-export default function BeritaDetailPage() {
-  const { id } = useParams()
-  const router = useRouter()
+function BeritaDetailContent() {
+  const params = useParams()
+  const id = params?.id as string
+
   const [beritaDetail, setBeritaDetail] = useState<Berita | null>(null)
   const [latestBerita, setLatestBerita] = useState<Berita[]>([])
   const [relatedBerita, setRelatedBerita] = useState<Berita[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
   const supabase = createClient()
   const { kategori } = useKategori()
 
   useEffect(() => {
+    if (!id) return
+
     const fetchAllData = async () => {
       try {
         const [detailRes, latestRes] = await Promise.all([
-          supabase
-            .from('berita')
-            .select('*')
-            .eq('id', id as string)
-            .single(),
+          supabase.from('berita').select('*').eq('id', id).single(),
           supabase.from('berita').select('*').order('created_at', { ascending: false }).limit(5),
         ])
 
         if (detailRes.error) throw detailRes.error
+
         setBeritaDetail(detailRes.data)
         setLatestBerita(latestRes.data || [])
 
@@ -84,12 +85,17 @@ export default function BeritaDetailPage() {
             .eq('kategori_id', detailRes.data.kategori_id)
             .neq('id', id)
             .limit(3)
+
           setRelatedBerita(relatedRes.data || [])
         }
 
-        // Update views
-        const { data: newViews } = await supabase.rpc('increment_views', { row_id: id })
-        if (newViews) setBeritaDetail((prev) => (prev ? { ...prev, views: newViews } : prev))
+        const { data: newViews } = await supabase.rpc('increment_views', {
+          row_id: id,
+        })
+
+        if (newViews) {
+          setBeritaDetail((prev) => (prev ? { ...prev, views: newViews } : prev))
+        }
       } catch (err) {
         console.error(err)
         setError('Berita tidak ditemukan atau terjadi kesalahan.')
@@ -98,7 +104,7 @@ export default function BeritaDetailPage() {
       }
     }
 
-    if (id) fetchAllData()
+    fetchAllData()
   }, [id, supabase])
 
   if (isLoading) return <SkeletonLoader />
@@ -107,7 +113,6 @@ export default function BeritaDetailPage() {
 
   return (
     <div className="min-h-screen bg-background transition-colors duration-300">
-      {/* Sticky Top Nav */}
       <nav className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
         <div className="container flex h-16 items-center px-4">
           <Button variant="ghost" size="sm" asChild className="gap-2 group">
@@ -124,15 +129,14 @@ export default function BeritaDetailPage() {
 
       <main className="container mx-auto px-4 py-8 lg:py-12">
         <div className="grid grid-cols-12 gap-8 lg:gap-12">
-          {/* Konten Utama */}
           <div className="col-span-12 lg:col-span-8 space-y-8">
             <motion.article initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-              {/* Header Info */}
               <header className="space-y-6 mb-8">
                 <div className="flex flex-wrap items-center gap-3">
                   <Badge className="bg-primary/10 text-primary hover:bg-primary/20 border-none px-3 py-1">
                     {kategori.find((k) => k.id === beritaDetail.kategori_id)?.nama || 'Umum'}
                   </Badge>
+
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <IconCalendar size={16} /> {formatDate(beritaDetail.created_at)}
@@ -151,7 +155,6 @@ export default function BeritaDetailPage() {
                 </h1>
               </header>
 
-              {/* Featured Image */}
               {beritaDetail.gambar && (
                 <div className="relative aspect-video rounded-3xl overflow-hidden mb-10 shadow-2xl shadow-primary/5">
                   <Image
@@ -164,7 +167,6 @@ export default function BeritaDetailPage() {
                 </div>
               )}
 
-              {/* Konten Artikel */}
               <div className="prose prose-emerald dark:prose-invert max-w-none">
                 {beritaDetail.konten.split('\n').map(
                   (para, i) =>
@@ -178,17 +180,18 @@ export default function BeritaDetailPage() {
 
               <Separator className="my-10" />
 
-              {/* Author & Share */}
               <div className="flex flex-col sm:flex-row justify-between items-center gap-6 p-6 rounded-2xl bg-muted/30 border">
                 <div className="flex items-center gap-4">
                   <div className="relative w-14 h-14 rounded-full border-2 border-primary overflow-hidden">
                     <Image src="/images/logo-rtq.png" alt="Admin" fill className="object-cover" />
                   </div>
+
                   <div>
                     <p className="text-sm text-muted-foreground font-medium">Ditulis oleh</p>
                     <h4 className="font-bold text-lg">Admin RTQ Al-Hikmah</h4>
                   </div>
                 </div>
+
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium mr-2 hidden sm:inline">Bagikan:</span>
                   <ShareDropdown title={beritaDetail.judul} />
@@ -197,14 +200,13 @@ export default function BeritaDetailPage() {
             </motion.article>
           </div>
 
-          {/* Sidebar */}
           <aside className="col-span-12 lg:col-span-4 space-y-10">
-            {/* Berita Terbaru Widget */}
             <section className="sticky top-24">
               <div className="flex items-center gap-2 mb-6">
                 <div className="w-1.5 h-6 bg-accent rounded-full" />
                 <h2 className="text-xl font-bold">Warta Terbaru</h2>
               </div>
+
               <div className="grid gap-6">
                 {latestBerita.map((item) => (
                   <Link key={item.id} href={`/berita/${item.id}`} className="group block">
@@ -218,6 +220,7 @@ export default function BeritaDetailPage() {
                             className="object-cover"
                           />
                         </div>
+
                         <div className="space-y-1">
                           <h3 className="font-bold text-sm line-clamp-2 group-hover:text-primary transition-colors leading-snug">
                             {item.judul}
@@ -235,16 +238,17 @@ export default function BeritaDetailPage() {
           </aside>
         </div>
 
-        {/* Berita Terkait Section */}
         <section className="mt-20">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-bold tracking-tight">Berita Terkait</h2>
+
             <Button variant="link" asChild className="text-primary gap-1">
               <Link href="/berita">
                 Lihat Semua <IconArrowRight size={16} />
               </Link>
             </Button>
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {relatedBerita.length > 0 ? (
               relatedBerita.map((item) => <CardRelatedBerita key={item.id} item={item} />)
@@ -257,6 +261,14 @@ export default function BeritaDetailPage() {
         </section>
       </main>
     </div>
+  )
+}
+
+export default function BeritaDetailPage() {
+  return (
+    <Suspense fallback={<SkeletonLoader />}>
+      <BeritaDetailContent />
+    </Suspense>
   )
 }
 
@@ -273,6 +285,7 @@ const SkeletonLoader = () => (
           <Skeleton className="h-4 w-3/4" />
         </div>
       </div>
+
       <div className="lg:col-span-4 space-y-6">
         <Skeleton className="h-6 w-32" />
         {[...Array(4)].map((_, i) => (
@@ -297,8 +310,10 @@ const ErrorMessage = ({ message }: { message: string }) => (
       <p className="text-muted-foreground mb-6">
         Mungkin berita telah dihapus atau link tidak valid.
       </p>
+
       <div className="flex gap-3 justify-center">
         <Button onClick={() => window.location.reload()}>Coba Lagi</Button>
+
         <Button variant="outline" asChild>
           <Link href="/berita">Ke Berita</Link>
         </Button>
