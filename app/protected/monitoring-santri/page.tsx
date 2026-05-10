@@ -29,6 +29,7 @@ import {
   reklasifikasiSantri,
 } from '@/lib/monitoring-santri'
 import type { SantriDenganRekomendasi, SantriFormData, MonitoringStats } from '@/lib/types'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -530,8 +531,10 @@ function DetailModal({
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
-
 export default function MonitoringSantriPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
   const [santriList, setSantriList] = useState<SantriDenganRekomendasi[]>([])
   const [stats, setStats] = useState<MonitoringStats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -559,6 +562,18 @@ export default function MonitoringSantriPage() {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  useEffect(() => {
+    const editId = searchParams.get('edit')
+    if (!editId || santriList.length === 0) return
+
+    const target = santriList.find((s) => s.id === editId)
+    if (!target) return
+
+    setEditSantri(target)
+    setShowForm(true)
+    router.replace('/protected/monitoring-santri', { scroll: false })
+  }, [searchParams, santriList, router])
 
   async function handleDelete(id: string, nama: string) {
     if (!confirm(`Yakin hapus santri "${nama}"?`)) return
@@ -829,7 +844,7 @@ export default function MonitoringSantriPage() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-end gap-1 transition-opacity">
                           <button
                             onClick={() => setDetailSantri(santri)}
                             className="p-1.5 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition-colors"
