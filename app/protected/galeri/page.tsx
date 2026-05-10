@@ -34,6 +34,7 @@ import { DataTable, type ColumnDef } from '@/components/data-table'
 import { ModalEditGaleri } from '@/components/protected/galeri/modal-edit-galeri'
 import { ModalHapusGaleri } from '@/components/protected/galeri/modal-hapus-galeri'
 import { ModalTambahGaleri } from '@/components/protected/galeri/modal-tambah-galeri'
+import Image from 'next/image'
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
 
@@ -139,7 +140,7 @@ function ThumbnailCell({ src, alt }: { src: string; alt: string }) {
   return (
     <div className="w-14 h-10 rounded-lg border border-border bg-muted/50 overflow-hidden flex items-center justify-center shrink-0">
       {!error ? (
-        <img
+        <Image
           src={src}
           alt={alt}
           className="w-full h-full object-cover"

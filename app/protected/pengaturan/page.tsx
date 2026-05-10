@@ -44,6 +44,7 @@ import {
   deleteGambar,
   type PengaturanWebsite,
 } from '@/lib/pengaturan'
+import Image from 'next/image'
 
 // ============================================================
 // HELPER COMPONENTS
@@ -105,7 +106,7 @@ function ImagePreviewArea({
           disabled:opacity-50 disabled:cursor-not-allowed relative`}
       >
         {value ? (
-          <img src={value} alt={label} className="w-full h-full object-cover" />
+          <Image src={value} alt={label} className="w-full h-full object-cover" />
         ) : (
           <div className="flex flex-col items-center gap-1 text-muted-foreground">
             <ImageIcon className="w-6 h-6" />

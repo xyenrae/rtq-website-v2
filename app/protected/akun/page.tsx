@@ -44,6 +44,7 @@ import {
   type PengaturanAkun,
 } from '@/lib/pengaturan'
 import { createClient } from '@/lib/supabase/client'
+import Image from 'next/image'
 
 // ============================================================
 // HELPER: Avatar Uploader
@@ -102,7 +103,7 @@ function AvatarUploader({
             disabled:opacity-50 disabled:cursor-not-allowed relative"
         >
           {value ? (
-            <img src={value} alt="Avatar" className="w-full h-full object-cover" />
+            <Image src={value} alt="Avatar" className="w-full h-full object-cover" />
           ) : (
             <UserCircle className="w-10 h-10 text-muted-foreground/50" />
           )}

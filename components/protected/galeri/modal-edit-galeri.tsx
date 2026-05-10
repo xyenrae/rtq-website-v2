@@ -18,6 +18,7 @@ import {
 } from '@tabler/icons-react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { updateGaleri, getKategoriStyle, type GaleriWithKategori } from '@/lib/galeri'
+import Image from 'next/image'
 
 // ─── Reusable UI ─────────────────────────────────────────────────────────────
 
@@ -268,7 +269,7 @@ export function ModalEditGaleri({
                 </div>
                 {!previewError ? (
                   <div className="relative w-full h-48 bg-muted/50 flex items-center justify-center overflow-hidden">
-                    <img
+                    <Image
                       src={imageUrl.trim()}
                       alt="preview"
                       className="w-full h-full object-contain"

@@ -17,6 +17,7 @@ import {
 import { useState } from 'react'
 import { deleteBerita, deleteBeritaWithCleanup, type Berita } from '@/lib/berita'
 import { toast } from 'sonner'
+import Image from 'next/image'
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
 
@@ -150,8 +151,7 @@ export function ModalDeleteBerita({ open, onClose, berita, onDeleted }: ModalDel
               {/* Thumbnail strip jika ada */}
               {berita.gambar && (
                 <div className="relative h-28 bg-muted overflow-hidden">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={berita.gambar}
                     alt={berita.judul}
                     className="w-full h-full object-cover opacity-80"

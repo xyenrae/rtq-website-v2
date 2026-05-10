@@ -21,6 +21,7 @@ import {
   type GaleriWithKategori,
   getKategoriStyle,
 } from '@/lib/galeri'
+import Image from 'next/image'
 
 // ─── Props Interface ──────────────────────────────────────────────────────────
 
@@ -151,7 +152,7 @@ export function ModalHapusGaleri({ open, onClose, galeri, onDeleted }: ModalHapu
               {/* Thumbnail */}
               <div className="relative w-full h-40 bg-muted/50 flex items-center justify-center overflow-hidden">
                 {!imgError ? (
-                  <img
+                  <Image
                     src={galeri.image_url}
                     alt={galeri.judul || 'foto'}
                     className="w-full h-full object-cover opacity-80"

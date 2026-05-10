@@ -8,7 +8,7 @@ import { twMerge } from 'tailwind-merge'
 import {
   X,
   FileText,
-  Image,
+  Image as ImageIcon,
   Clock,
   AlertCircle,
   CheckCircle2,
@@ -37,6 +37,7 @@ import {
   type Status,
 } from '@/lib/berita'
 import { toast } from 'sonner'
+import Image from 'next/image'
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
 
@@ -504,7 +505,7 @@ function Step3({
 
         {mode === 'url' ? (
           <div className="flex items-center rounded-lg border border-border bg-background overflow-hidden">
-            <Image className="h-4 w-4 text-muted-foreground ml-3.5 shrink-0" />
+            <ImageIcon className="h-4 w-4 text-muted-foreground ml-3.5 shrink-0" />
             <input
               type="url"
               placeholder="https://example.com/gambar.jpg"
@@ -580,8 +581,7 @@ function Step3({
         {/* Preview */}
         {previewSrc && !previewError && (
           <div className="mt-3 relative rounded-xl border border-border overflow-hidden bg-muted h-48 group">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src={previewSrc}
               alt="Preview thumbnail"
               className="w-full h-full object-cover"
