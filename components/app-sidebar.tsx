@@ -8,7 +8,6 @@ import {
   IconPhoto,
   IconFolders,
   IconBell,
-  IconCalendarEvent,
   IconSchool,
   IconUsers,
   IconChalkboard,
@@ -16,12 +15,13 @@ import {
   IconSettings,
   IconLogout,
   IconShieldHalfFilled,
+  IconUserCircle,
 } from '@tabler/icons-react'
 
-import { NavDocuments } from '@/components/nav-documents'
 import { NavMain } from '@/components/nav-main'
-import { NavSecondary } from '@/components/nav-secondary'
-import { NavUser } from '@/components/nav-user'
+import { NavKonten } from '@/components/nav-konten'
+import { NavAkademik } from '@/components/nav-akademik'
+import { NavSistem } from '@/components/nav-sistem'
 import {
   Sidebar,
   SidebarContent,
@@ -31,28 +31,30 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
+import { NavUser } from './nav-user'
 
 const data = {
-  user: {
-    name: 'Admin Pondok',
-    email: 'admin@pesantren.id',
-    avatar: '/avatars/shadcn.jpg',
-  },
-  navMain: [
-    { title: 'Dashboard', url: '/protected', icon: IconDashboard },
+  // Section 1 — hanya Dashboard (ditangani NavMain)
+  navMain: [{ title: 'Dashboard', url: '/protected', icon: IconDashboard }],
+
+  // Section 2 — Konten & Publikasi
+  navKonten: [
     { title: 'Berita', url: '/protected/berita', icon: IconNews },
     { title: 'Kategori Berita', url: '/protected/berita/kategori', icon: IconTags },
     { title: 'Galeri', url: '/protected/galeri', icon: IconPhoto },
     { title: 'Kategori Galeri', url: '/protected/galeri/kategori', icon: IconFolders },
-    { title: 'Pengumuman', url: '/protected/pengumuman', icon: IconBell },
-    { title: 'Agenda Kegiatan', url: '/protected/agenda', icon: IconCalendarEvent },
   ],
-  documents: [
-    { name: 'Monitoring Santri', url: '/protected/monitoring-santri', icon: IconSchool },
-    { name: 'Hasil Rekomendasi', url: '/protected/hasil-rekomendasi', icon: IconUsers },
-    { name: 'Aturan Capaian', url: '/protected/aturan-capaian', icon: IconChalkboard },
+
+  // Section 3 — Akademik & Santri
+  navAkademik: [
+    { title: 'Monitoring Santri', url: '/protected/monitoring-santri', icon: IconSchool },
+    { title: 'Hasil Rekomendasi', url: '/protected/hasil-rekomendasi', icon: IconUsers },
+    { title: 'Aturan Capaian', url: '/protected/aturan-capaian', icon: IconChalkboard },
+    { title: 'Data Guru', url: '/protected/guru', icon: IconUserCircle },
   ],
-  navSecondary: [
+
+  // Section 4 — Sistem & Akun
+  navSistem: [
     { title: 'Akun & Profil', url: '/protected/akun', icon: IconUser },
     { title: 'Pengaturan', url: '/protected/pengaturan', icon: IconSettings },
     { title: 'Keluar Akun', url: '#', icon: IconLogout, isLogout: true },
@@ -66,7 +68,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
-              <a href="#">
+              <a href="/protected">
                 <IconShieldHalfFilled className="!size-6 text-primary" />
                 <span className="text-lg font-bold tracking-tight">Hayolo hayolo</span>
               </a>
@@ -76,9 +78,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
 
       <SidebarContent>
+        {/* Dashboard */}
         <NavMain items={data.navMain} />
-        <NavDocuments items={data.documents} />
-        <NavSecondary items={data.navSecondary} label="Settings" />
+
+        {/* Konten & Publikasi */}
+        <NavKonten items={data.navKonten} />
+
+        {/* Akademik & Santri */}
+        <NavAkademik items={data.navAkademik} />
+
+        {/* Sistem & Akun */}
+        <div className="mt-auto">
+          <NavSistem items={data.navSistem} />
+        </div>
       </SidebarContent>
 
       <SidebarFooter>
