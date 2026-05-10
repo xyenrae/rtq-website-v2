@@ -79,7 +79,7 @@ export function TableSantriPerhatian() {
             variant="ghost"
             size="sm"
             onClick={handleViewAll}
-            className="shrink-0 text-xs text-muted-foreground hover:text-primary gap-1.5"
+            className="shrink-0 text-xs text-muted-foreground hover:text-primary hover:bg-muted gap-1.5"
           >
             Lihat semua
             <IconArrowRight size={13} />

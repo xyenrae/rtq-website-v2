@@ -32,14 +32,14 @@ function getStatusMeta(status: string) {
   if (key === 'bbk' || key === 'butuh bimbingan khusus') {
     return {
       label: 'Butuh Bimbingan Khusus',
-      color: hslVar('--primary'),
+      color: hslVar('--destructive'),
     }
   }
 
   if (key === 'tbbk' || key === 'tidak butuh bimbingan khusus') {
     return {
       label: 'Tidak Butuh Bimbingan Khusus',
-      color: hslVar('--muted-foreground'),
+      color: hslVar('--primary'),
     }
   }
 

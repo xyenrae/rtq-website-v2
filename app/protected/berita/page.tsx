@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   IconPlus,
   IconEdit,
@@ -72,12 +73,9 @@ function StatCard({
     <div className="bg-card border border-border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow group">
       {/* ── Desktop Layout (1 Row) ── */}
       <div className="hidden sm:flex items-start gap-4">
-        {/* Icon */}
         <div className={`w-11 h-11 rounded-lg flex items-center justify-center shrink-0 ${accent}`}>
           {icon}
         </div>
-
-        {/* Content */}
         <div className="flex-1 min-w-0 space-y-0.5">
           <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
             {label}
@@ -85,8 +83,6 @@ function StatCard({
           <p className="text-2xl font-bold text-foreground leading-tight break-words">{value}</p>
           <p className="text-xs text-muted-foreground">{sub}</p>
         </div>
-
-        {/* CTA */}
         {ctaLabel && onCtaClick && (
           <button
             onClick={(e) => {
@@ -106,16 +102,12 @@ function StatCard({
 
       {/* ── Mobile Layout (2 Rows) ── */}
       <div className="flex sm:hidden flex-col gap-3">
-        {/* Row 1: Icon + Label/Value */}
         <div className="flex items-start gap-3">
-          {/* Icon */}
           <div
             className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${accent}`}
           >
             {icon}
           </div>
-
-          {/* Label + Value (Stacked) */}
           <div className="flex-1 min-w-0 space-y-0.5">
             <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide leading-tight">
               {label}
@@ -123,13 +115,8 @@ function StatCard({
             <p className="text-lg font-bold text-foreground leading-tight break-words">{value}</p>
           </div>
         </div>
-
-        {/* Row 2: Sub + CTA */}
         <div className="flex items-center justify-between">
-          {/* Sub text */}
           <p className="text-[10px] text-muted-foreground">{sub}</p>
-
-          {/* CTA Button */}
           {ctaLabel && onCtaClick && (
             <button
               onClick={(e) => {
@@ -172,6 +159,9 @@ function getCategoryStyle(name: string) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function BeritaPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
   const [data, setData] = useState<Berita[]>([])
   const [kategoris, setKategoris] = useState<BeritaKategori[]>([])
   const [loading, setLoading] = useState(true)
@@ -182,8 +172,6 @@ export default function BeritaPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [editBerita, setEditBerita] = useState<Berita | null>(null)
   const [deleteBeritaTarget, setDeleteBeritaTarget] = useState<Berita | null>(null)
-
-  // Di dalam komponen BeritaPage
   const [externalFilter, setExternalFilter] = useState<Record<string, string>>({})
 
   const handleManagePublished = () => {
@@ -218,12 +206,27 @@ export default function BeritaPage() {
     loadData()
   }, [loadData])
 
+  // ── Auto-open edit modal dari ?edit=<id> (CTA dari dashboard) ─────────────
+
+  useEffect(() => {
+    const editId = searchParams.get('edit')
+    if (!editId || data.length === 0) return
+
+    const target = data.find((b) => b.id === editId)
+    if (!target) return
+
+    setEditBerita(target)
+    // Bersihkan param dari URL agar bisa trigger ulang di klik berikutnya
+    router.replace('/protected/berita', { scroll: false })
+  }, [searchParams, data, router])
+
   // ── Stats ──────────────────────────────────────────────────────────────────
 
   const totalViews = data.reduce((a, b) => a + b.views, 0)
   const publishedCount = data.filter((b) => b.status === 'published').length
 
   // ── Handlers ───────────────────────────────────────────────────────────────
+
   async function handleDelete(id: string) {
     setDeletingId(id)
     try {
@@ -252,7 +255,6 @@ export default function BeritaPage() {
     }
   }
 
-  /** Dipanggil oleh modal setelah insert sukses — tambahkan ke list tanpa refetch */
   function handleSave(berita: Berita) {
     setData((d) => [berita, ...d])
   }
@@ -368,7 +370,6 @@ export default function BeritaPage() {
           className="flex items-center justify-center gap-1.5"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Edit — bisa dikembangkan dengan ModalEditBerita */}
           <button
             onClick={() => setEditBerita(row)}
             className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"
@@ -529,7 +530,7 @@ export default function BeritaPage() {
         />
       )}
 
-      {/* Modal — kategoris di-pass dari state page, tidak di-fetch ulang di dalam modal */}
+      {/* Modals */}
       <ModalTambahBerita
         open={modalOpen}
         onClose={() => setModalOpen(false)}

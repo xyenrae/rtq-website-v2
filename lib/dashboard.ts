@@ -182,39 +182,24 @@ type KategoriRelation = {
 export async function getKontenTerkini(): Promise<KontenTerkini[]> {
   const supabase = createClient()
 
-  const [beritaRes, galeriRes] = await Promise.all([
-    supabase
-      .from('berita')
-      .select(
-        `
-        id,
-        judul,
-        created_at,
-        berita_kategori:kategori_id (
-          nama
-        )
+  const { data, error } = await supabase
+    .from('berita')
+    .select(
       `
+      id,
+      judul,
+      created_at,
+      berita_kategori:kategori_id (
+        nama
       )
-      .order('created_at', { ascending: false })
-      .limit(5),
+    `
+    )
+    .order('created_at', { ascending: false })
+    .limit(5)
 
-    supabase
-      .from('galeri')
-      .select(
-        `
-        id,
-        judul,
-        created_at,
-        galeri_kategori:galeri_kategori_id (
-          nama
-        )
-      `
-      )
-      .order('created_at', { ascending: false })
-      .limit(5),
-  ])
+  if (error || !data) return []
 
-  const beritaItems: KontenTerkini[] = (beritaRes.data ?? []).map((item) => {
+  return data.map((item) => {
     const kategori = getRelation(
       item.berita_kategori as KategoriRelation | KategoriRelation[] | null
     )
@@ -223,26 +208,8 @@ export async function getKontenTerkini(): Promise<KontenTerkini[]> {
       id: item.id,
       judul: item.judul ?? 'Tanpa Judul',
       kategori: kategori?.nama ?? 'Umum',
-      tipe: 'berita',
+      tipe: 'berita' as const,
       created_at: item.created_at,
     }
   })
-
-  const galeriItems: KontenTerkini[] = (galeriRes.data ?? []).map((item) => {
-    const kategori = getRelation(
-      item.galeri_kategori as KategoriRelation | KategoriRelation[] | null
-    )
-
-    return {
-      id: item.id,
-      judul: item.judul ?? 'Foto Galeri',
-      kategori: kategori?.nama ?? 'Umum',
-      tipe: 'galeri',
-      created_at: item.created_at,
-    }
-  })
-
-  return [...beritaItems, ...galeriItems]
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 5)
 }
