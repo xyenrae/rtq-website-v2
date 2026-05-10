@@ -34,12 +34,6 @@ export default function VisiMisi() {
     <section className="relative w-full py-14 md:py-20 overflow-hidden bg-background text-foreground transition-colors duration-300">
       {/* Background */}
       <div className="absolute inset-0 z-0">
-        <Image
-          src="/images/bg-islami.jpg"
-          alt="Background RTQ"
-          fill
-          className="object-cover opacity-15 scale-105"
-        />
         <div className="absolute inset-0 bg-gradient-to-b from-background/95 via-background/80 to-background/95 backdrop-blur-[2px]" />
       </div>
 
