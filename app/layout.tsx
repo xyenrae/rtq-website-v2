@@ -7,6 +7,7 @@ import ConditionalLayout from '@/components/layout/ConditionalLayout'
 import './globals.css'
 import { createClient } from '@/lib/supabase/client'
 import { unstable_cache } from 'next/cache'
+import { VisitorTracker } from '@/components/tracker/visitor-tracker'
 
 const fredoka = Fredoka({
   subsets: ['latin'],
@@ -62,6 +63,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className="antialiased bg-background text-foreground w-screen overflow-x-hidden font-fredoka"
         suppressHydrationWarning={true}
       >
+        <VisitorTracker />
         <NextTopLoader color="var(--primary)" showSpinner={false} />
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <ConditionalLayout>{children}</ConditionalLayout>

@@ -20,7 +20,7 @@ import {
 
 import { NavDocuments } from '@/components/nav-documents'
 import { NavMain } from '@/components/nav-main'
-import { NavSecondary } from '@/components/nav-secondary' // Import komponen baru
+import { NavSecondary } from '@/components/nav-secondary'
 import { NavUser } from '@/components/nav-user'
 import {
   Sidebar,
@@ -52,7 +52,6 @@ const data = {
     { name: 'Hasil Rekomendasi', url: '/protected/hasil-rekomendasi', icon: IconUsers },
     { name: 'Aturan Capaian', url: '/protected/aturan-capaian', icon: IconChalkboard },
   ],
-  // Update: tambahkan isLogout: true untuk item logout
   navSecondary: [
     { title: 'Akun & Profil', url: '/protected/akun', icon: IconUser },
     { title: 'Pengaturan', url: '/protected/pengaturan', icon: IconSettings },
@@ -77,13 +76,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
 
       <SidebarContent>
-        {/* Menu Operasional & Konten */}
         <NavMain items={data.navMain} />
-
-        {/* Master Data Akademik */}
         <NavDocuments items={data.documents} />
-
-        {/* Menu Sistem & Logout (Komponen Terpisah) */}
         <NavSecondary items={data.navSecondary} label="Settings" />
       </SidebarContent>
 
