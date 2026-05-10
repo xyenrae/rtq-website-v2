@@ -58,7 +58,10 @@ export async function generateMetadata(): Promise<Metadata> {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="id" suppressHydrationWarning className={fredoka.variable}>
-      <body className="antialiased bg-background text-foreground w-screen overflow-x-hidden font-fredoka">
+      <body
+        className="antialiased bg-background text-foreground w-screen overflow-x-hidden font-fredoka"
+        suppressHydrationWarning={true}
+      >
         <NextTopLoader color="var(--primary)" showSpinner={false} />
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <ConditionalLayout>{children}</ConditionalLayout>
