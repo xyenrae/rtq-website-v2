@@ -272,7 +272,8 @@ export function ModalEditGaleri({
                     <Image
                       src={imageUrl.trim()}
                       alt="preview"
-                      className="w-full h-full object-contain"
+                      fill
+                      className="object-contain"
                       onError={() => setPreviewError(true)}
                     />
                   </div>

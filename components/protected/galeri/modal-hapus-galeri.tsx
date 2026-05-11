@@ -155,7 +155,8 @@ export function ModalHapusGaleri({ open, onClose, galeri, onDeleted }: ModalHapu
                   <Image
                     src={galeri.image_url}
                     alt={galeri.judul || 'foto'}
-                    className="w-full h-full object-cover opacity-80"
+                    fill
+                    className="object-cover opacity-80"
                     onError={() => setImgError(true)}
                   />
                 ) : (
@@ -164,9 +165,10 @@ export function ModalHapusGaleri({ open, onClose, galeri, onDeleted }: ModalHapu
                     <span className="text-xs">Pratinjau tidak tersedia</span>
                   </div>
                 )}
+
                 {/* Overlay badge */}
                 {galeri.galeri_kategori && kategoriStyle && (
-                  <div className="absolute bottom-2 left-2">
+                  <div className="absolute bottom-2 left-2 z-10">
                     <span
                       className={cn(
                         'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border bg-card/90 backdrop-blur-sm',

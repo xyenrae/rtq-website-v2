@@ -100,13 +100,13 @@ function ImagePreviewArea({
         type="button"
         onClick={onClick}
         disabled={uploading}
-        className={`${previewClass} border-2 border-dashed border-border bg-muted
-          flex items-center justify-center overflow-hidden shrink-0
-          hover:border-primary hover:bg-muted/60 transition-all cursor-pointer
-          disabled:opacity-50 disabled:cursor-not-allowed relative`}
+        className={`group ${previewClass} border-2 border-dashed border-border bg-muted
+    flex items-center justify-center overflow-hidden shrink-0
+    hover:border-primary hover:bg-muted/60 transition-all cursor-pointer
+    disabled:opacity-50 disabled:cursor-not-allowed relative`}
       >
         {value ? (
-          <Image src={value} alt={label} className="w-full h-full object-cover" />
+          <Image src={value} alt={label} fill className="object-cover" />
         ) : (
           <div className="flex flex-col items-center gap-1 text-muted-foreground">
             <ImageIcon className="w-6 h-6" />
@@ -116,7 +116,7 @@ function ImagePreviewArea({
 
         <div
           className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100
-          transition-opacity flex items-center justify-center rounded-inherit"
+    transition-opacity flex items-center justify-center"
         >
           <div className="flex flex-col items-center text-white gap-1">
             {uploading ? (
@@ -133,7 +133,7 @@ function ImagePreviewArea({
         {uploading && (
           <div
             className="absolute top-1 right-1 bg-primary/90 text-primary-foreground
-            text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+      text-[10px] px-1.5 py-0.5 rounded-full font-medium"
           >
             ...
           </div>

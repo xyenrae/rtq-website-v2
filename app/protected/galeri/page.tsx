@@ -138,14 +138,9 @@ function StatCard({
 function ThumbnailCell({ src, alt }: { src: string; alt: string }) {
   const [error, setError] = useState(false)
   return (
-    <div className="w-14 h-10 rounded-lg border border-border bg-muted/50 overflow-hidden flex items-center justify-center shrink-0">
+    <div className="relative w-14 h-10 rounded-lg border border-border bg-muted/50 overflow-hidden flex items-center justify-center shrink-0">
       {!error ? (
-        <Image
-          src={src}
-          alt={alt}
-          className="w-full h-full object-cover"
-          onError={() => setError(true)}
-        />
+        <Image src={src} alt={alt} fill className="object-cover" onError={() => setError(true)} />
       ) : (
         <IconPhoto size={16} className="text-muted-foreground opacity-40" />
       )}

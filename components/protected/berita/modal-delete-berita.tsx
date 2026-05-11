@@ -154,8 +154,10 @@ export function ModalDeleteBerita({ open, onClose, berita, onDeleted }: ModalDel
                   <Image
                     src={berita.gambar}
                     alt={berita.judul}
-                    className="w-full h-full object-cover opacity-80"
+                    fill
+                    className="object-cover opacity-80"
                   />
+
                   <div className="absolute inset-0 bg-gradient-to-t from-card/80 to-transparent" />
                 </div>
               )}

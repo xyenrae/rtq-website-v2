@@ -547,9 +547,11 @@ function Step3({
             <Image
               src={previewSrc}
               alt="Preview thumbnail"
-              className="w-full h-full object-cover"
+              fill
+              className="object-cover"
               onError={() => setPreviewError(true)}
             />
+
             <button
               type="button"
               onClick={() => {
@@ -557,11 +559,12 @@ function Step3({
                 onThumbnailFileChange(null)
                 setPreviewError(false)
               }}
-              className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 border border-border text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 border border-border text-foreground opacity-0 group-hover:opacity-100 transition-opacity z-10"
             >
               <X className="h-3.5 w-3.5" />
             </button>
-            <div className="absolute bottom-0 inset-x-0 px-3 py-2 bg-gradient-to-t from-black/40 to-transparent pointer-events-none">
+
+            <div className="absolute bottom-0 inset-x-0 px-3 py-2 bg-gradient-to-t from-black/40 to-transparent pointer-events-none z-10">
               <p className="text-xs text-white font-medium">Pratinjau Thumbnail</p>
             </div>
           </div>

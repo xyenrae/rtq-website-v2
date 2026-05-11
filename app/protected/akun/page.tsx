@@ -97,20 +97,21 @@ function AvatarUploader({
           type="button"
           onClick={() => !uploading && inputRef.current?.click()}
           disabled={uploading}
-          className="w-20 h-20 rounded-full border-2 border-dashed border-border bg-muted
-            flex items-center justify-center overflow-hidden
-            hover:border-primary hover:bg-muted/60 transition-all cursor-pointer
-            disabled:opacity-50 disabled:cursor-not-allowed relative"
+          className="group w-20 h-20 rounded-full border-2 border-dashed border-border bg-muted
+    flex items-center justify-center overflow-hidden
+    hover:border-primary hover:bg-muted/60 transition-all cursor-pointer
+    disabled:opacity-50 disabled:cursor-not-allowed relative"
         >
           {value ? (
-            <Image src={value} alt="Avatar" className="w-full h-full object-cover" />
+            <Image src={value} alt="Avatar" fill className="object-cover" />
           ) : (
             <UserCircle className="w-10 h-10 text-muted-foreground/50" />
           )}
+
           {/* Hover overlay */}
           <div
             className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100
-            transition-opacity flex items-center justify-center rounded-full"
+    transition-opacity flex items-center justify-center rounded-full"
           >
             {uploading ? (
               <Loader2 className="w-5 h-5 text-white animate-spin" />
