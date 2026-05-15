@@ -30,50 +30,12 @@ import {
 
 import type { StatusRekomendasi } from '@/lib/types'
 import {
-  RekomendasiRow,
-  StatistikRekomendasi,
+  type RekomendasiRow,
+  type StatistikRekomendasi,
   fetchHasilRekomendasiList,
   fetchStatistikRekomendasi,
   reklasifikasiSemua,
-} from '@/lib/hasil-rekomendasi'
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-type DurasiKey =
-  | 'durasi_jilid_0'
-  | 'durasi_jilid_1'
-  | 'durasi_jilid_2'
-  | 'durasi_jilid_3'
-  | 'durasi_jilid_4'
-  | 'durasi_jilid_5'
-  | 'durasi_jilid_6'
-
-const DURASI_KEYS: DurasiKey[] = [
-  'durasi_jilid_0',
-  'durasi_jilid_1',
-  'durasi_jilid_2',
-  'durasi_jilid_3',
-  'durasi_jilid_4',
-  'durasi_jilid_5',
-  'durasi_jilid_6',
-]
-
-function getDurasiValues(row: RekomendasiRow): number[] {
-  return DURASI_KEYS.map((key) => row[key]).filter((value): value is number => value !== null)
-}
-
-function getDurasiStats(row: RekomendasiRow) {
-  const durasis = getDurasiValues(row)
-
-  const total = durasis.reduce((acc, value) => acc + value, 0)
-  const rata = durasis.length ? total / durasis.length : 0
-
-  return {
-    durasis,
-    total,
-    rata,
-  }
-}
+} from '@/lib/ml-services/hasil-rekomendasi'
 
 // ─── Sub-components ────────────────────────────────────────────────────────
 
@@ -120,12 +82,10 @@ function AlasanModal({
               <p className="text-xs text-muted-foreground">{nama}</p>
             </div>
           </div>
-
           <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-muted">
             <IconX size={15} className="text-muted-foreground" />
           </button>
         </div>
-
         <div className="p-5">
           <pre className="whitespace-pre-wrap rounded-lg bg-muted/40 p-4 font-mono text-xs leading-relaxed text-foreground/80">
             {alasan}
@@ -150,7 +110,6 @@ function CustomTooltip({
   return (
     <div className="rounded-lg border border-border bg-card p-3 text-xs shadow-lg">
       <p className="mb-1 font-semibold text-foreground">{label}</p>
-
       {payload.map((item, i) => (
         <p key={i} className="font-medium" style={{ color: item.fill }}>
           {item.name}: {item.value}
@@ -165,27 +124,19 @@ function CustomTooltip({
 export default function HasilRekomendasiPage() {
   const [data, setData] = useState<RekomendasiRow[]>([])
   const [statistik, setStatistik] = useState<StatistikRekomendasi | null>(null)
-
   const [loading, setLoading] = useState(true)
   const [reklasLoading, setReklasLoading] = useState(false)
-
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<StatusRekomendasi | ''>('')
-
-  const [showAlasan, setShowAlasan] = useState<{
-    alasan: string
-    nama: string
-  } | null>(null)
+  const [showAlasan, setShowAlasan] = useState<{ alasan: string; nama: string } | null>(null)
 
   const loadData = useCallback(async () => {
     setLoading(true)
-
     try {
       const [list, stats] = await Promise.all([
         fetchHasilRekomendasiList(),
         fetchStatistikRekomendasi(),
       ])
-
       setData(list)
       setStatistik(stats)
     } catch (err) {
@@ -201,23 +152,20 @@ export default function HasilRekomendasiPage() {
 
   useEffect(() => {
     if (loading) return
-
-    fetchHasilRekomendasiList({
-      status: filterStatus,
-      search,
-    })
+    fetchHasilRekomendasiList({ status: filterStatus, search })
       .then(setData)
       .catch(() => {})
   }, [filterStatus, search, loading])
 
   async function handleReklasifikasiSemua() {
     setReklasLoading(true)
-
     try {
-      const { berhasil } = await reklasifikasiSemua()
-
-      toast.success(`Reklasifikasi selesai: ${berhasil} santri berhasil diproses`)
-
+      const { berhasil, gagal } = await reklasifikasiSemua()
+      if (berhasil === 0 && gagal === 0) {
+        toast.info('Tidak ada santri yang ditemukan')
+      } else {
+        toast.success(`Reklasifikasi selesai: ${berhasil} berhasil, ${gagal} gagal`)
+      }
       await loadData()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Gagal reklasifikasi')
@@ -228,61 +176,49 @@ export default function HasilRekomendasiPage() {
 
   function handleExport() {
     const rows = [
-      ['No', 'Nama', 'Jilid', 'Taskih', 'Status', 'Probabilitas', 'Tanggal Klasifikasi'],
-
-      ...data.map((row, i) => {
-        const { total, rata } = getDurasiStats(row)
-
-        return [
-          i + 1,
-          row.nama,
-          row.jilid_saat_ini,
-          row.total_pengulangan_taskih,
-          row.status_rekomendasi ?? '-',
-          row.probabilitas ? `${Math.round(row.probabilitas * 100)}%` : '-',
-          row.classified_at ? new Date(row.classified_at).toLocaleDateString('id-ID') : '-',
-          `Total: ${total.toFixed(1)} bln`,
-          `Rata: ${rata.toFixed(1)} bln`,
-        ]
-      }),
+      [
+        'No',
+        'Nama',
+        'Jilid',
+        'Durasi Aktif (bln)',
+        'Taskih',
+        'Status',
+        'Probabilitas',
+        'Tanggal Klasifikasi',
+      ],
+      ...data.map((row, i) => [
+        i + 1,
+        row.nama,
+        row.jilid_saat_ini === 7 ? 'Al-Quran' : `Jilid ${row.jilid_saat_ini}`,
+        row.durasi_jilid_aktif ?? '-',
+        row.total_pengulangan_taskih,
+        row.status_rekomendasi ?? '-',
+        row.probabilitas ? `${Math.round(row.probabilitas * 100)}%` : '-',
+        row.classified_at ? new Date(row.classified_at).toLocaleDateString('id-ID') : '-',
+      ]),
     ]
 
     const csv = rows.map((row) => row.join(',')).join('\n')
-
-    const blob = new Blob([csv], {
-      type: 'text/csv',
-    })
-
+    const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
-
     const a = document.createElement('a')
     a.href = url
     a.download = `rekomendasi-${new Date().toISOString().slice(0, 10)}.csv`
     a.click()
-
     URL.revokeObjectURL(url)
-
     toast.success('Laporan berhasil diekspor')
   }
 
   const pieData = statistik
     ? [
-        {
-          name: 'BBK',
-          value: statistik.bbk,
-          color: '#ef4444',
-        },
-        {
-          name: 'TBBK',
-          value: statistik.tbbk,
-          color: '#10b981',
-        },
+        { name: 'BBK', value: statistik.bbk, color: '#ef4444' },
+        { name: 'TBBK', value: statistik.tbbk, color: '#10b981' },
       ]
     : []
 
   return (
     <div className="min-h-screen bg-background">
-      <div className=" px-4 sm:px-6 py-6 space-y-6">
+      <div className="px-4 sm:px-6 py-6 space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -453,16 +389,16 @@ export default function HasilRekomendasiPage() {
                     Jilid
                   </th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">
-                    Total Durasi
-                  </th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">
-                    Rata-rata
+                    Durasi Aktif
                   </th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">
                     Taskih
                   </th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">
                     Status
+                  </th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">
+                    Probabilitas
                   </th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">
                     Klasifikasi
@@ -489,78 +425,77 @@ export default function HasilRekomendasiPage() {
                       <div className="flex flex-col items-center gap-2">
                         <IconChartBar size={32} className="text-muted-foreground/40" />
                         <p className="text-muted-foreground text-sm">Belum ada data rekomendasi</p>
+                        <p className="text-muted-foreground text-xs">
+                          Klik &quot;Jalankan Ulang Klasifikasi&quot; untuk memulai
+                        </p>
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  data.map((row, idx) => {
-                    const { total, rata } = getDurasiStats(row)
+                  data.map((row, idx) => (
+                    <tr key={row.id} className="transition-colors hover:bg-muted/30">
+                      <td className="px-4 py-3 text-xs text-muted-foreground">{idx + 1}</td>
 
-                    return (
-                      <tr key={row.id} className="transition-colors hover:bg-muted/30">
-                        <td className="px-4 py-3 text-xs text-muted-foreground">{idx + 1}</td>
-
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                              {row.nama.charAt(0)}
-                            </div>
-
-                            <span className="font-medium text-foreground">{row.nama}</span>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                            {row.nama.charAt(0)}
                           </div>
-                        </td>
+                          <span className="font-medium text-foreground">{row.nama}</span>
+                        </div>
+                      </td>
 
-                        <td className="px-4 py-3 text-sm text-foreground">
-                          {row.jilid_saat_ini === 7 ? 'Al-Quran' : `Jilid ${row.jilid_saat_ini}`}
-                        </td>
+                      <td className="px-4 py-3 text-sm text-foreground">
+                        {row.jilid_saat_ini === 7 ? 'Al-Quran' : `Jilid ${row.jilid_saat_ini}`}
+                      </td>
 
-                        <td className="px-4 py-3 text-sm text-foreground">
-                          {total.toFixed(1)} bln
-                        </td>
+                      {/* Durasi jilid aktif saja */}
+                      <td className="px-4 py-3 text-sm text-foreground">
+                        {row.durasi_jilid_aktif != null ? `${row.durasi_jilid_aktif} bln` : '—'}
+                      </td>
 
-                        <td className="px-4 py-3 text-sm text-foreground">
-                          {rata > 0 ? `${rata.toFixed(1)} bln` : '—'}
-                        </td>
+                      <td className="px-4 py-3 text-sm font-medium text-foreground">
+                        {row.taskih_aktif ?? row.total_pengulangan_taskih}x
+                      </td>
 
-                        <td className="px-4 py-3 text-sm font-medium text-foreground">
-                          {row.total_pengulangan_taskih}x
-                        </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={row.status_rekomendasi} />
+                      </td>
 
-                        <td className="px-4 py-3">
-                          <StatusBadge status={row.status_rekomendasi} />
-                        </td>
+                      <td className="px-4 py-3 text-sm text-foreground">
+                        {row.probabilitas != null ? `${Math.round(row.probabilitas * 100)}%` : '—'}
+                      </td>
 
-                        <td className="px-4 py-3 text-xs text-muted-foreground">
-                          {row.classified_at
-                            ? new Date(row.classified_at).toLocaleDateString('id-ID', {
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric',
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        {row.classified_at
+                          ? new Date(row.classified_at).toLocaleDateString('id-ID', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                            })
+                          : '—'}
+                      </td>
+
+                      <td className="px-4 py-3">
+                        {row.alasan_rekomendasi ? (
+                          <button
+                            onClick={() =>
+                              setShowAlasan({
+                                alasan: row.alasan_rekomendasi!,
+                                nama: row.nama,
                               })
-                            : '—'}
-                        </td>
-
-                        <td className="px-4 py-3">
-                          {row.alasan_rekomendasi ? (
-                            <button
-                              onClick={() =>
-                                setShowAlasan({
-                                  alasan: row.alasan_rekomendasi!,
-                                  nama: row.nama,
-                                })
-                              }
-                              className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
-                            >
-                              <IconInfoCircle size={13} />
-                              Lihat Alasan
-                            </button>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })
+                            }
+                            className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+                          >
+                            <IconInfoCircle size={13} />
+                            Lihat Alasan
+                          </button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>

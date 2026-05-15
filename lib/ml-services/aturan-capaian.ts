@@ -1,14 +1,14 @@
-import { createClient } from '@/lib/supabase/client'
-import { mlLatih, mlFeatureImportance, type MLEvaluasiResult } from '@/lib/mlClient'
-import type { AturanCapaian, AturanCapaianFormData } from '@/lib/types'
+/**
+ * Aturan Capaian Service
+ */
 
-// ─── Client ───────────────────────────────────────────────────────────────────
+import { createClient } from '@/lib/supabase/client'
+import { mlFeatureImportance, mlLatih, type MLEvaluasiResult } from '@/lib/ml-services/mlClient'
+import type { AturanCapaian, AturanCapaianFormData } from '@/lib/types'
 
 function getClient() {
   return createClient()
 }
-
-// ─── Types lokal ──────────────────────────────────────────────────────────────
 
 export interface EvaluasiResult {
   akurasi: number
@@ -23,8 +23,6 @@ export interface FeatureImportanceItem {
   nama: string
   importance: number
 }
-
-// ─── Queries ──────────────────────────────────────────────────────────────────
 
 export async function fetchAturanAktif(): Promise<AturanCapaian | null> {
   const supabase = getClient()
@@ -51,22 +49,18 @@ export async function fetchRiwayatAturan(): Promise<AturanCapaian[]> {
   return (data ?? []) as AturanCapaian[]
 }
 
-/**
- * Ambil feature importance dari Decision Tree (fitur mana yang paling berpengaruh)
- */
 export async function fetchFeatureImportance(): Promise<FeatureImportanceItem[]> {
   const result = await mlFeatureImportance()
   return result.features
 }
 
-// ─── Mutations ────────────────────────────────────────────────────────────────
-
 export async function simpanAturan(formData: AturanCapaianFormData): Promise<AturanCapaian> {
   const supabase = getClient()
 
-  // Nonaktifkan semua aturan lama
+  // Nonaktifkan aturan lama
   await supabase.from('aturan_capaian').update({ is_active: false }).eq('is_active', true)
 
+  // Simpan aturan baru — trigger di DB akan otomatis generate training_master
   const { data, error } = await supabase
     .from('aturan_capaian')
     .insert({
@@ -91,20 +85,15 @@ export async function resetAturanDefault(): Promise<AturanCapaian> {
 }
 
 /**
- * Latih ulang Decision Tree dengan aturan baru.
+ * Latih ulang Decision Tree.
  *
- * Alur:
- * 1. Simpan aturan baru ke Supabase
- * 2. Ambil data santri yang sudah ada labelnya (dari rekomendasi manual guru) sebagai data latih
- * 3. Kirim ke ML Service untuk dilatih ulang
- * 4. Simpan hasil evaluasi kembali ke Supabase
- *
- * @param aturanId - ID aturan yang sudah disimpan di Supabase
+ * Sumber data: tabel training_master yang sudah digenerate otomatis
+ * oleh trigger saat aturan disimpan.
  */
 export async function latihUlangModel(aturanId: string): Promise<EvaluasiResult> {
   const supabase = getClient()
 
-  // Ambil aturan dari DB
+  // Ambil aturan
   const { data: aturan, error: aErr } = await supabase
     .from('aturan_capaian')
     .select('*')
@@ -113,37 +102,46 @@ export async function latihUlangModel(aturanId: string): Promise<EvaluasiResult>
 
   if (aErr) throw new Error('Aturan tidak ditemukan')
 
-  // Ambil data santri beserta label rekomendasi terbaru sebagai data latih
-  // (hanya yang sudah pernah diklasifikasi → ada label ground truth)
-  const { data: dataSantri, error: sErr } = await supabase
-    .from('santri_dengan_rekomendasi')
-    .select('*')
-    .not('status_rekomendasi', 'is', null)
+  // Ambil data training dari tabel master
+  const { data: trainingData, error: tErr } = await supabase
+    .from('training_master')
+    .select('jilid, durasi_bulan, pengulangan_taskih, label')
+    .eq('aturan_id', aturanId)
 
-  if (sErr) throw sErr
+  if (tErr) throw tErr
 
-  // Format data latih untuk ML Service
-  const dataLatih = (dataSantri ?? []).map((s) => ({
-    jilid_saat_ini: s.jilid_saat_ini,
-    total_pengulangan_taskih: s.total_pengulangan_taskih,
-    durasi_jilid_0: s.durasi_jilid_0 ?? null,
-    durasi_jilid_1: s.durasi_jilid_1 ?? null,
-    durasi_jilid_2: s.durasi_jilid_2 ?? null,
-    durasi_jilid_3: s.durasi_jilid_3 ?? null,
-    durasi_jilid_4: s.durasi_jilid_4 ?? null,
-    durasi_jilid_5: s.durasi_jilid_5 ?? null,
-    durasi_jilid_6: s.durasi_jilid_6 ?? null,
-    label: s.status_rekomendasi as 'BBK' | 'TBBK',
+  if (!trainingData || trainingData.length === 0) {
+    throw new Error('Data training belum tersedia. Coba simpan ulang aturan capaian.')
+  }
+
+  // Bangun data latih untuk ML Service
+  const dataLatih = (
+    trainingData as Array<{
+      jilid: number
+      durasi_bulan: number
+      pengulangan_taskih: number
+      label: 'BBK' | 'TBBK'
+    }>
+  ).map((row) => ({
+    jilid_saat_ini: row.jilid,
+    total_pengulangan_taskih: row.pengulangan_taskih,
+    durasi_jilid_0: row.jilid === 0 ? row.durasi_bulan : null,
+    durasi_jilid_1: row.jilid === 1 ? row.durasi_bulan : null,
+    durasi_jilid_2: row.jilid === 2 ? row.durasi_bulan : null,
+    durasi_jilid_3: row.jilid === 3 ? row.durasi_bulan : null,
+    durasi_jilid_4: row.jilid === 4 ? row.durasi_bulan : null,
+    durasi_jilid_5: row.jilid === 5 ? row.durasi_bulan : null,
+    durasi_jilid_6: row.jilid === 6 ? row.durasi_bulan : null,
+    label: row.label,
   }))
 
-  // ✅ Panggil ML Service untuk latih Decision Tree
   const evaluasi: MLEvaluasiResult = await mlLatih({
     aturan: {
-      batas_durasi_jilid_0_4: aturan.batas_durasi_jilid_0_4,
-      batas_durasi_jilid_5_6: aturan.batas_durasi_jilid_5_6,
-      batas_pengulangan_taskih: aturan.batas_pengulangan_taskih,
+      batas_durasi_jilid_0_4: aturan.batas_durasi_jilid_0_4 as number,
+      batas_durasi_jilid_5_6: aturan.batas_durasi_jilid_5_6 as number,
+      batas_pengulangan_taskih: aturan.batas_pengulangan_taskih as number,
     },
-    data_latih: dataLatih.length >= 10 ? dataLatih : undefined, // min 10 data real
+    data_latih: dataLatih,
   })
 
   // Simpan hasil evaluasi ke Supabase

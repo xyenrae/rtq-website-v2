@@ -27,7 +27,7 @@ import {
   updateSantri,
   deleteSantri,
   reklasifikasiSantri,
-} from '@/lib/monitoring-santri'
+} from '@/lib/ml-services/monitoring-santri'
 import type { SantriDenganRekomendasi, SantriFormData, MonitoringStats } from '@/lib/types'
 import { useRouter, useSearchParams } from 'next/navigation'
 

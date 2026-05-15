@@ -3,8 +3,10 @@
 // ============================================================
 
 export type JenisKelamin = 'L' | 'P'
-export type StatusRekomendasi = 'BBK' | 'TBBK'
-export type SumberKlasifikasi = 'model' | 'manual' | 'rule-based'
+export type StatusRekomendasi = 'TBBK' | 'BBK'
+export type SumberKlasifikasi = 'decision-tree' | 'rule-based' | 'manual'
+
+// ─── Master Santri ────────────────────────────────────────────────────────────
 
 export interface Santri {
   id: string
@@ -14,24 +16,61 @@ export interface Santri {
   jenis_kelamin: JenisKelamin | null
   jilid_saat_ini: number
   total_pengulangan_taskih: number
+  /** @deprecated Gunakan SantriProgress.durasi_bulan */
   durasi_jilid_0: number | null
+  /** @deprecated Gunakan SantriProgress.durasi_bulan */
   durasi_jilid_1: number | null
+  /** @deprecated Gunakan SantriProgress.durasi_bulan */
   durasi_jilid_2: number | null
+  /** @deprecated Gunakan SantriProgress.durasi_bulan */
   durasi_jilid_3: number | null
+  /** @deprecated Gunakan SantriProgress.durasi_bulan */
   durasi_jilid_4: number | null
+  /** @deprecated Gunakan SantriProgress.durasi_bulan */
   durasi_jilid_5: number | null
+  /** @deprecated Gunakan SantriProgress.durasi_bulan */
   durasi_jilid_6: number | null
   created_at: string
   updated_at: string
 }
 
+// ─── Progress Per-Jilid ───────────────────────────────────────────────────────
+
+export interface SantriProgress {
+  id: string
+  santri_id: string
+  /** 0–7 (7 = Al-Quran) */
+  jilid: number
+  /** Durasi menyelesaikan jilid ini dalam bulan */
+  durasi_bulan: number | null
+  pengulangan_taskih: number
+  tanggal_mulai: string | null
+  tanggal_selesai: string | null
+  /** true = jilid yang sedang berjalan saat ini */
+  is_aktif: boolean
+  created_at: string
+  updated_at: string
+}
+
+// ─── View: santri_dengan_rekomendasi ─────────────────────────────────────────
+
 export interface SantriDenganRekomendasi extends Santri {
+  progress_id: string | null
+  jilid_aktif: number | null
+  durasi_jilid_aktif: number | null
+  taskih_aktif: number | null
+  tanggal_mulai: string | null
+  tanggal_selesai: string | null
+  rekomendasi_id: string | null
   status_rekomendasi: StatusRekomendasi | null
   alasan_rekomendasi: string | null
   probabilitas: number | null
   classified_at: string | null
   sumber_rekomendasi: SumberKlasifikasi | null
+  model_versi_rekomendasi: string | null
 }
+
+// ─── Rekomendasi ──────────────────────────────────────────────────────────────
 
 export interface Rekomendasi {
   id: string
@@ -49,6 +88,8 @@ export interface RekomendasiDenganSantri extends Rekomendasi {
   santri: Pick<Santri, 'id' | 'nama' | 'jilid_saat_ini' | 'total_pengulangan_taskih'>
 }
 
+// ─── Aturan Capaian ───────────────────────────────────────────────────────────
+
 export interface AturanCapaian {
   id: string
   batas_durasi_jilid_0_4: number
@@ -65,6 +106,14 @@ export interface AturanCapaian {
   updated_at: string
 }
 
+export interface AturanCapaianFormData {
+  batas_durasi_jilid_0_4: number
+  batas_durasi_jilid_5_6: number
+  batas_pengulangan_taskih: number
+}
+
+// ─── Form Data ────────────────────────────────────────────────────────────────
+
 export interface SantriFormData {
   nama: string
   tanggal_lahir: string
@@ -72,6 +121,7 @@ export interface SantriFormData {
   jenis_kelamin: JenisKelamin
   jilid_saat_ini: number
   total_pengulangan_taskih: number
+  tanggal_mulai?: string
   durasi_jilid_0: string
   durasi_jilid_1: string
   durasi_jilid_2: string
@@ -81,6 +131,8 @@ export interface SantriFormData {
   durasi_jilid_6: string
 }
 
+// ─── Klasifikasi ──────────────────────────────────────────────────────────────
+
 export interface KlasifikasiResult {
   status: StatusRekomendasi
   alasan: string
@@ -88,6 +140,8 @@ export interface KlasifikasiResult {
   model_versi: string
   fitur_snapshot: Record<string, number | null>
 }
+
+// ─── Model Evaluasi ───────────────────────────────────────────────────────────
 
 export interface ModelEvaluasi {
   akurasi: number
@@ -98,13 +152,8 @@ export interface ModelEvaluasi {
   trained_at: string
 }
 
-export interface AturanCapaianFormData {
-  batas_durasi_jilid_0_4: number
-  batas_durasi_jilid_5_6: number
-  batas_pengulangan_taskih: number
-}
+// ─── Dashboard Stats ──────────────────────────────────────────────────────────
 
-// Stats untuk dashboard
 export interface MonitoringStats {
   total_santri: number
   bbk_count: number
