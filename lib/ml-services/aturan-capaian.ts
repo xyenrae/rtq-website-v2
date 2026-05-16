@@ -77,11 +77,119 @@ export async function simpanAturan(formData: AturanCapaianFormData): Promise<Atu
 }
 
 export async function resetAturanDefault(): Promise<AturanCapaian> {
-  return simpanAturan({
+  const supabase = getClient()
+
+  const { data: existingDefault, error } = await supabase
+    .from('aturan_capaian')
+    .select('*')
+    .eq('batas_durasi_jilid_0_4', 3)
+    .eq('batas_durasi_jilid_5_6', 4)
+    .eq('batas_pengulangan_taskih', 2)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+
+  if (error) {
+    throw error
+  }
+
+  if (existingDefault) {
+    return await setAturanAktif(existingDefault.id)
+  }
+
+  return await simpanAturan({
     batas_durasi_jilid_0_4: 3,
     batas_durasi_jilid_5_6: 4,
     batas_pengulangan_taskih: 2,
   })
+}
+
+/**
+ * Hapus aturan/model
+ */
+export async function deleteAturan(id: string): Promise<void> {
+  const supabase = getClient()
+
+  // Cek aturan
+  const { data: aturan, error: checkError } = await supabase
+    .from('aturan_capaian')
+    .select('id, is_active')
+    .eq('id', id)
+    .single()
+
+  if (checkError || !aturan) {
+    throw new Error('Model tidak ditemukan')
+  }
+
+  // Jangan hapus model aktif
+  if (aturan.is_active) {
+    throw new Error('Model aktif tidak dapat dihapus')
+  }
+
+  // Hapus data training terkait dulu
+  const { error: trainingError } = await supabase
+    .from('training_master')
+    .delete()
+    .eq('aturan_id', id)
+
+  if (trainingError) {
+    throw trainingError
+  }
+
+  // Hapus aturan
+  const { error } = await supabase.from('aturan_capaian').delete().eq('id', id)
+
+  if (error) {
+    throw error
+  }
+}
+
+/**
+ * Jadikan aturan/model sebagai aktif
+ */
+export async function setAturanAktif(id: string): Promise<AturanCapaian> {
+  const supabase = getClient()
+
+  // Ambil data aturan target
+  const { data: aturan, error: checkError } = await supabase
+    .from('aturan_capaian')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (checkError || !aturan) {
+    throw new Error('Model tidak ditemukan')
+  }
+
+  // Nonaktifkan semua model aktif
+  const { error: disableError } = await supabase
+    .from('aturan_capaian')
+    .update({
+      is_active: false,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('is_active', true)
+
+  if (disableError) {
+    throw disableError
+  }
+
+  // Aktifkan model terpilih
+  const { data, error } = await supabase
+    .from('aturan_capaian')
+    .update({
+      is_active: true,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  return data as AturanCapaian
 }
 
 /**
