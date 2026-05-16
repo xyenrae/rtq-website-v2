@@ -69,7 +69,7 @@ export function SiteHeader() {
 
         {/* COPYRIGHT DESKTOP */}
         <div className="hidden lg:block text-xs text-muted-foreground whitespace-nowrap">
-          © {currentYear} RTQ AL-HIKMAH. All rights reserved.
+          © {currentYear} RTQ AL-Hikmah. All rights reserved.
         </div>
       </div>
     </header>

@@ -378,7 +378,7 @@ function TabIdentitas({
               id="nama_rtq"
               value={data.nama_rtq ?? ''}
               onChange={(e) => onChange('nama_rtq', e.target.value)}
-              placeholder="contoh: RTQ Al-Ikhlas"
+              placeholder="RTQ AL-HIKMAH"
             />
           </div>
 
@@ -440,7 +440,7 @@ function TabIdentitas({
                 type="email"
                 value={data.email ?? ''}
                 onChange={(e) => onChange('email', e.target.value)}
-                placeholder="info@rtq-alikhlas.id"
+                placeholder="rtqalhikmahngurensiti@gmail.com"
               />
             </div>
           </div>
@@ -630,7 +630,7 @@ function TabKontak({
               id="teks_footer"
               value={data.teks_footer ?? ''}
               onChange={(e) => onChange('teks_footer', e.target.value)}
-              placeholder="© 2025 RTQ Al-Ikhlas. Semua hak dilindungi."
+              placeholder="© 2026 RTQ Al-Hikmah. Semua hak dilindungi."
             />
             <p className="text-xs text-muted-foreground">
               Tampil di bagian bawah setiap halaman website
@@ -673,7 +673,7 @@ function TabSEO({
               id="meta_title"
               value={data.meta_title ?? ''}
               onChange={(e) => onChange('meta_title', e.target.value)}
-              placeholder="RTQ Al-Ikhlas - Pusat Pendidikan Al-Quran"
+              placeholder="RTQ Al-Hikmah"
               maxLength={60}
             />
             <div className="flex justify-between text-xs text-muted-foreground">
