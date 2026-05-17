@@ -23,16 +23,12 @@ import {
 } from '@/lib/galeri'
 import Image from 'next/image'
 
-// ─── Props Interface ──────────────────────────────────────────────────────────
-
 export interface ModalHapusGaleriProps {
   open: boolean
   onClose: () => void
   galeri: GaleriWithKategori
   onDeleted: (id: string) => void
 }
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 export function ModalHapusGaleri({ open, onClose, galeri, onDeleted }: ModalHapusGaleriProps) {
   const [deleting, setDeleting] = useState(false)
@@ -49,12 +45,12 @@ export function ModalHapusGaleri({ open, onClose, galeri, onDeleted }: ModalHapu
   const handleDelete = async () => {
     setDeleting(true)
     try {
-      await deleteGaleri(galeri.id)
+      await deleteGaleri(galeri.id, galeri.image_url)
       onDeleted(galeri.id)
       toast.success('Foto berhasil dihapus', {
         description: galeri.judul
-          ? `"${galeri.judul}" telah dihapus secara permanen.`
-          : 'Foto telah dihapus secara permanen.',
+          ? `"${galeri.judul}" dan file storage telah dihapus permanen.`
+          : 'Foto dan file storage telah dihapus permanen.',
         duration: 4000,
       })
       setConfirmed(false)
@@ -112,7 +108,6 @@ export function ModalHapusGaleri({ open, onClose, galeri, onDeleted }: ModalHapu
             'duration-200'
           )}
         >
-          {/* Header */}
           <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-border shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-destructive/10 flex items-center justify-center shrink-0">
@@ -123,7 +118,7 @@ export function ModalHapusGaleri({ open, onClose, galeri, onDeleted }: ModalHapu
                   Hapus Foto Galeri
                 </DialogPrimitive.Title>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Tindakan ini tidak dapat dibatalkan
+                  Foto & file storage akan dihapus permanen
                 </p>
               </div>
             </div>
@@ -136,20 +131,17 @@ export function ModalHapusGaleri({ open, onClose, galeri, onDeleted }: ModalHapu
             </DialogPrimitive.Close>
           </div>
 
-          {/* Body */}
           <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1">
-            {/* Warning */}
             <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-destructive/5 border border-destructive/20">
               <IconAlertTriangle size={15} className="text-destructive shrink-0 mt-0.5" />
               <p className="text-xs text-destructive leading-relaxed">
-                Foto yang dihapus <span className="font-semibold">tidak dapat dipulihkan</span>.
-                Pastikan kamu sudah yakin sebelum melanjutkan.
+                Data galeri <span className="font-semibold">dan file gambar di storage</span> akan
+                dihapus secara permanen dan{' '}
+                <span className="font-semibold">tidak dapat dipulihkan</span>.
               </p>
             </div>
 
-            {/* Detail Foto */}
             <div className="rounded-xl border border-border bg-muted/30 overflow-hidden">
-              {/* Thumbnail */}
               <div className="relative w-full h-40 bg-muted/50 flex items-center justify-center overflow-hidden">
                 {!imgError ? (
                   <Image
@@ -165,16 +157,9 @@ export function ModalHapusGaleri({ open, onClose, galeri, onDeleted }: ModalHapu
                     <span className="text-xs">Pratinjau tidak tersedia</span>
                   </div>
                 )}
-
-                {/* Overlay badge */}
                 {galeri.galeri_kategori && kategoriStyle && (
                   <div className="absolute bottom-2 left-2 z-10">
-                    <span
-                      className={cn(
-                        'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border bg-card/90 backdrop-blur-sm',
-                        'border-border'
-                      )}
-                    >
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border bg-card/90 backdrop-blur-sm border-border">
                       <span className={`w-1.5 h-1.5 rounded-full ${kategoriStyle.dot}`} />
                       <span className={kategoriStyle.text}>{galeri.galeri_kategori.nama}</span>
                     </span>
@@ -182,7 +167,6 @@ export function ModalHapusGaleri({ open, onClose, galeri, onDeleted }: ModalHapu
                 )}
               </div>
 
-              {/* Info */}
               <div className="p-4 space-y-2">
                 <p className="font-bold text-foreground text-sm">
                   {galeri.judul || (
@@ -193,7 +177,7 @@ export function ModalHapusGaleri({ open, onClose, galeri, onDeleted }: ModalHapu
                   <p className="text-xs text-muted-foreground line-clamp-2">{galeri.deskripsi}</p>
                 )}
                 <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1">
-                  {(galeri.width || galeri.height) && (
+                  {(galeri.width ?? galeri.height) && (
                     <span className="flex items-center gap-1 text-xs text-muted-foreground">
                       <IconDimensions size={11} />
                       {formatDimensions(galeri.width, galeri.height)}
@@ -213,7 +197,6 @@ export function ModalHapusGaleri({ open, onClose, galeri, onDeleted }: ModalHapu
               </div>
             </div>
 
-            {/* Konfirmasi */}
             <label className="flex items-start gap-3 cursor-pointer select-none group">
               <div className="relative mt-0.5 shrink-0">
                 <input
@@ -235,7 +218,7 @@ export function ModalHapusGaleri({ open, onClose, galeri, onDeleted }: ModalHapu
                 </div>
               </div>
               <span className="text-xs text-muted-foreground leading-relaxed group-hover:text-foreground transition-colors">
-                Saya mengerti bahwa foto ini akan dihapus secara{' '}
+                Saya mengerti bahwa foto dan file storage akan dihapus secara{' '}
                 <span className="font-semibold text-foreground">
                   permanen dan tidak bisa dipulihkan
                 </span>
@@ -244,7 +227,6 @@ export function ModalHapusGaleri({ open, onClose, galeri, onDeleted }: ModalHapu
             </label>
           </div>
 
-          {/* Footer */}
           <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border bg-muted/20 shrink-0">
             <button
               type="button"

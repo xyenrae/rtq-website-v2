@@ -18,7 +18,7 @@ import { useGaleriKategori } from '@/hooks/santri/galeri/useGaleriKategori'
 import SkeletonGaleri from '@/components/skeleton/galeri/SkeletonGaleri'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogClose, DialogTitle } from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -157,9 +157,23 @@ export default function GaleriPage() {
     }
   }, [selectedImage])
 
-  if (loading || loadingKategori) return <SkeletonGaleri />
+  const heroImage = useMemo(() => {
+    return (
+      [...galeri]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .find((img) => {
+          if (!img.width || !img.height) return false
 
-  const heroImageUrl = galeri.find((img) => img.image_url)?.image_url
+          const ratio = img.width / img.height
+
+          return ratio > 1.1
+        }) ?? null
+    )
+  }, [galeri])
+
+  const heroImageUrl = heroImage?.image_url
+
+  if (loading || loadingKategori) return <SkeletonGaleri />
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -284,6 +298,9 @@ export default function GaleriPage() {
         >
           {selectedImage && (
             <>
+              <DialogTitle className="sr-only">
+                {selectedImage.judul ?? 'Preview Gambar'}
+              </DialogTitle>
               <LightboxImage
                 src={selectedImage.image_url}
                 alt={selectedImage.judul ?? 'Preview'}

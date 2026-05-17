@@ -14,9 +14,6 @@ import {
   IconTag,
   IconDimensions,
   IconCalendar,
-  IconSearch,
-  IconX,
-  IconEye,
   IconFilter,
 } from '@tabler/icons-react'
 import { clsx, type ClassValue } from 'clsx'
@@ -36,13 +33,9 @@ import { ModalHapusGaleri } from '@/components/protected/galeri/modal-hapus-gale
 import { ModalTambahGaleri } from '@/components/protected/galeri/modal-tambah-galeri'
 import Image from 'next/image'
 
-// ─── Utils ────────────────────────────────────────────────────────────────────
-
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
-
-// ─── StatCard ─────────────────────────────────────────────────────────────────
 
 function StatCard({
   icon,
@@ -98,7 +91,6 @@ function StatCard({
           </button>
         )}
       </div>
-      {/* Mobile */}
       <div className="flex sm:hidden flex-col gap-3">
         <div className="flex items-start gap-3">
           <div
@@ -133,8 +125,6 @@ function StatCard({
   )
 }
 
-// ─── Image Thumbnail Cell ─────────────────────────────────────────────────────
-
 function ThumbnailCell({ src, alt }: { src: string; alt: string }) {
   const [error, setError] = useState(false)
   return (
@@ -148,23 +138,15 @@ function ThumbnailCell({ src, alt }: { src: string; alt: string }) {
   )
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
 export default function GaleriPage() {
   const [galeris, setGaleris] = useState<GaleriWithKategori[]>([])
   const [kategoris, setKategoris] = useState<GaleriKategori[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  // Filter
-  const [filterKategori, setFilterKategori] = useState<string>('all')
-
-  // Modals
+  const [filterKategori, setFilterKategori] = useState('all')
   const [modalTambahOpen, setModalTambahOpen] = useState(false)
   const [editGaleri, setEditGaleri] = useState<GaleriWithKategori | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<GaleriWithKategori | null>(null)
-
-  // ── Load ────────────────────────────────────────────────────────────────────
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -184,14 +166,9 @@ export default function GaleriPage() {
     loadData()
   }, [loadData])
 
-  // ── Stats ───────────────────────────────────────────────────────────────────
-
   const totalFoto = galeris.length
   const fotoWithKategori = galeris.filter((g) => g.galeri_kategori_id !== null).length
   const fotoWithDimensi = galeris.filter((g) => g.width && g.height).length
-  const latestFoto = galeris[0] ?? null
-
-  // ── Filtered Data ───────────────────────────────────────────────────────────
 
   const filteredGaleris =
     filterKategori === 'all'
@@ -199,8 +176,6 @@ export default function GaleriPage() {
       : filterKategori === 'uncategorized'
         ? galeris.filter((g) => !g.galeri_kategori_id)
         : galeris.filter((g) => g.galeri_kategori_id === filterKategori)
-
-  // ── Handlers ────────────────────────────────────────────────────────────────
 
   function handleSave(galeri: GaleriWithKategori) {
     setGaleris((prev) => [galeri, ...prev])
@@ -216,18 +191,22 @@ export default function GaleriPage() {
   }
 
   async function handleBulkDelete(keys: string[]) {
+    const items = galeris
+      .filter((g) => keys.includes(g.id))
+      .map((g) => ({ id: g.id, imageUrl: g.image_url }))
+
     try {
-      await deleteBulkGaleri(keys)
+      await deleteBulkGaleri(items)
       setGaleris((prev) => prev.filter((g) => !keys.includes(g.id)))
-      toast.success(`${keys.length} foto galeri berhasil dihapus`)
+      toast.success(`${keys.length} foto galeri berhasil dihapus`, {
+        description: 'File storage ikut terhapus.',
+      })
     } catch (e: unknown) {
       toast.error('Gagal menghapus beberapa foto', {
         description: e instanceof Error ? e.message : undefined,
       })
     }
   }
-
-  // ── Columns ─────────────────────────────────────────────────────────────────
 
   const columns: ColumnDef<GaleriWithKategori>[] = [
     {
@@ -239,27 +218,20 @@ export default function GaleriPage() {
       key: 'judul',
       header: 'Judul & Deskripsi',
       sortable: true,
-      cell: (row) => {
-        return (
-          <div className="flex flex-col min-w-0 max-w-xs">
-            <span className="font-semibold text-foreground truncate">
-              {row.judul || (
-                <span className="text-muted-foreground italic font-normal text-xs">
-                  Tanpa judul
-                </span>
-              )}
-            </span>
-            {row.deskripsi && (
-              <p
-                className="text-xs text-muted-foreground mt-0.5 line-clamp-1"
-                title={row.deskripsi}
-              >
-                {row.deskripsi}
-              </p>
+      cell: (row) => (
+        <div className="flex flex-col min-w-0 max-w-xs">
+          <span className="font-semibold text-foreground truncate">
+            {row.judul || (
+              <span className="text-muted-foreground italic font-normal text-xs">Tanpa judul</span>
             )}
-          </div>
-        )
-      },
+          </span>
+          {row.deskripsi && (
+            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1" title={row.deskripsi}>
+              {row.deskripsi}
+            </p>
+          )}
+        </div>
+      ),
     },
     {
       key: 'galeri_kategori',
@@ -271,11 +243,7 @@ export default function GaleriPage() {
         }
         const style = getKategoriStyle(row.galeri_kategori.nama)
         return (
-          <span
-            className={cn(
-              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-secondary/50 border-border dark:bg-white/5 dark:border-white/10'
-            )}
-          >
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-secondary/50 border-border dark:bg-white/5 dark:border-white/10">
             <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
             <span className={style.text}>{row.galeri_kategori.nama}</span>
           </span>
@@ -307,11 +275,14 @@ export default function GaleriPage() {
       sortable: true,
       cell: (row) => {
         if (!row.created_at) return <span className="text-xs text-muted-foreground italic">—</span>
-        const date = new Date(row.created_at)
         return (
           <span className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
             <IconCalendar size={12} />
-            {date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+            {new Date(row.created_at).toLocaleDateString('id-ID', {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+            })}
           </span>
         )
       },
@@ -344,11 +315,8 @@ export default function GaleriPage() {
     },
   ]
 
-  // ── Render ──────────────────────────────────────────────────────────────────
-
   return (
     <div className="min-h-screen bg-background p-3 sm:p-6">
-      {/* Header */}
       <div className="mb-6 flex items-start justify-between flex-wrap gap-4">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
@@ -382,7 +350,6 @@ export default function GaleriPage() {
 
       <hr className="my-4" />
 
-      {/* Error */}
       {error && (
         <div className="mb-6 flex items-center gap-3 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl px-4 py-3">
           <IconAlertCircle size={18} className="shrink-0" />
@@ -393,7 +360,6 @@ export default function GaleriPage() {
         </div>
       )}
 
-      {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
         <StatCard
           icon={
@@ -431,7 +397,6 @@ export default function GaleriPage() {
         />
       </div>
 
-      {/* Filter Kategori */}
       {!loading && kategoris.length > 0 && (
         <div className="mb-4 flex items-center gap-2 flex-wrap">
           <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
@@ -487,7 +452,6 @@ export default function GaleriPage() {
         </div>
       )}
 
-      {/* Table */}
       {loading && galeris.length === 0 ? (
         <div className="flex items-center justify-center h-48 text-muted-foreground gap-2">
           <IconLoader2 size={20} className="animate-spin" />
@@ -515,7 +479,6 @@ export default function GaleriPage() {
         />
       )}
 
-      {/* Modals */}
       <ModalTambahGaleri
         open={modalTambahOpen}
         onClose={() => setModalTambahOpen(false)}

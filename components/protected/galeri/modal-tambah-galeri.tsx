@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import {
@@ -8,18 +8,14 @@ import {
   IconX,
   IconCheck,
   IconLoader2,
-  IconPhoto,
-  IconLink,
-  IconDimensions,
   IconTag,
+  IconDimensions,
   IconAlertCircle,
-  IconEye,
+  IconLock,
 } from '@tabler/icons-react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { insertGaleri, getKategoriStyle, type GaleriWithKategori } from '@/lib/galeri'
-import Image from 'next/image'
-
-// ─── Reusable UI ─────────────────────────────────────────────────────────────
+import { ImageUploader } from '@/components/protected/galeri/image-uploader'
 
 function FieldLabel({
   children,
@@ -36,6 +32,7 @@ function FieldLabel({
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null
+
   return (
     <p className="mt-1.5 text-xs text-destructive flex items-center gap-1">
       <IconAlertCircle size={11} />
@@ -52,7 +49,27 @@ const inputBase = cn(
 
 const textareaBase = cn(inputBase, 'min-h-[80px] max-h-[120px] resize-y leading-relaxed')
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+function getImageDimensions(file: File): Promise<{
+  width: number
+  height: number
+}> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image()
+
+    img.onload = () => {
+      resolve({
+        width: img.width,
+        height: img.height,
+      })
+
+      URL.revokeObjectURL(img.src)
+    }
+
+    img.onerror = reject
+
+    img.src = URL.createObjectURL(file)
+  })
+}
 
 interface GaleriKategoriOption {
   id: string
@@ -66,48 +83,72 @@ export interface ModalTambahGaleriProps {
   kategoris: GaleriKategoriOption[]
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export function ModalTambahGaleri({ open, onClose, onSave, kategoris }: ModalTambahGaleriProps) {
   const [imageUrl, setImageUrl] = useState('')
+  const [imageFile, setImageFile] = useState<File | null>(null)
+
   const [judul, setJudul] = useState('')
   const [deskripsi, setDeskripsi] = useState('')
-  const [kategoriId, setKategoriId] = useState<string>('')
-  const [width, setWidth] = useState<string>('')
-  const [height, setHeight] = useState<string>('')
+  const [kategoriId, setKategoriId] = useState('')
+
+  const [width, setWidth] = useState('')
+  const [height, setHeight] = useState('')
+
   const [saving, setSaving] = useState(false)
-  const [previewError, setPreviewError] = useState(false)
   const [error, setError] = useState<Record<string, string>>({})
+
+  const [createdAt, setCreatedAt] = useState(new Date().toISOString().slice(0, 16))
 
   useEffect(() => {
     if (open) {
       setImageUrl('')
+      setImageFile(null)
+
       setJudul('')
       setDeskripsi('')
       setKategoriId('')
+
       setWidth('')
       setHeight('')
+
+      setCreatedAt(new Date().toISOString().slice(0, 16))
+
       setSaving(false)
-      setPreviewError(false)
       setError({})
     }
   }, [open])
 
   const validate = () => {
     const newErr: Record<string, string> = {}
-    if (!imageUrl.trim()) newErr.imageUrl = 'URL gambar tidak boleh kosong'
-    else if (!/^https?:\/\/.+/.test(imageUrl.trim())) newErr.imageUrl = 'URL gambar tidak valid'
-    if (judul.trim().length > 100) newErr.judul = 'Judul maksimal 100 karakter'
-    if (deskripsi.length > 500) newErr.deskripsi = 'Deskripsi maksimal 500 karakter'
-    if (width && (isNaN(Number(width)) || Number(width) <= 0))
-      newErr.width = 'Lebar harus berupa angka positif'
-    if (height && (isNaN(Number(height)) || Number(height) <= 0))
-      newErr.height = 'Tinggi harus berupa angka positif'
+
+    if (!imageFile && !imageUrl.trim()) {
+      newErr.imageUrl = 'Pilih file atau masukkan URL gambar'
+    } else if (!imageFile && !/^https?:\/\/.+/.test(imageUrl.trim())) {
+      newErr.imageUrl = 'URL gambar tidak valid'
+    }
+
+    if (!judul.trim()) {
+      newErr.judul = 'Judul wajib diisi'
+    } else if (judul.trim().length > 100) {
+      newErr.judul = 'Judul maksimal 100 karakter'
+    }
+
+    if (!deskripsi.trim()) {
+      newErr.deskripsi = 'Deskripsi wajib diisi'
+    } else if (deskripsi.length > 500) {
+      newErr.deskripsi = 'Deskripsi maksimal 500 karakter'
+    }
+
+    if (!kategoriId) {
+      newErr.kategoriId = 'Kategori wajib dipilih'
+    }
+
     return newErr
   }
 
   const handleSave = async () => {
     const errs = validate()
+
     if (Object.keys(errs).length > 0) {
       setError(errs)
       return
@@ -117,35 +158,46 @@ export function ModalTambahGaleri({ open, onClose, onSave, kategoris }: ModalTam
     setError({})
 
     try {
-      const result = await insertGaleri({
-        image_url: imageUrl.trim(),
-        judul: judul.trim() || null,
-        deskripsi: deskripsi.trim() || null,
-        galeri_kategori_id: kategoriId || null,
-        width: width ? Number(width) : null,
-        height: height ? Number(height) : null,
-      })
+      const result = await insertGaleri(
+        {
+          image_url: imageUrl.trim(),
+          judul: judul.trim(),
+          deskripsi: deskripsi.trim(),
+          galeri_kategori_id: kategoriId,
+          width: width ? Number(width) : null,
+          height: height ? Number(height) : null,
+          created_at: new Date(createdAt).toISOString(),
+        },
+        imageFile ?? undefined
+      )
 
       onSave(result)
+
       toast.success('Foto berhasil ditambahkan', {
-        description: result.judul
-          ? `"${result.judul}" telah ditambahkan.`
-          : 'Foto baru ditambahkan ke galeri.',
+        description: `"${result.judul}" telah ditambahkan.`,
         duration: 3000,
       })
+
       onClose()
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Terjadi kesalahan pada server.'
+
       setError({ imageUrl: msg })
-      toast.error('Gagal menambahkan foto', { description: msg, duration: 5000 })
+
+      toast.error('Gagal menambahkan foto', {
+        description: msg,
+        duration: 5000,
+      })
     } finally {
       setSaving(false)
     }
   }
 
   const selectedKategori = kategoris.find((k) => k.id === kategoriId)
+
   const kategoriStyle = selectedKategori ? getKategoriStyle(selectedKategori.nama) : null
-  const showPreview = imageUrl.trim() && /^https?:\/\/.+/.test(imageUrl.trim())
+
+  const hasImage = !!imageFile || (!!imageUrl.trim() && /^https?:\/\/.+/.test(imageUrl.trim()))
 
   return (
     <DialogPrimitive.Root
@@ -156,6 +208,7 @@ export function ModalTambahGaleri({ open, onClose, onSave, kategoris }: ModalTam
     >
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 duration-200" />
+
         <DialogPrimitive.Content
           onInteractOutside={(e) => {
             e.preventDefault()
@@ -177,19 +230,22 @@ export function ModalTambahGaleri({ open, onClose, onSave, kategoris }: ModalTam
             'duration-200'
           )}
         >
-          {/* Header */}
+          {/* HEADER */}
           <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-border shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                 <IconPlus size={18} className="text-primary" />
               </div>
+
               <div>
                 <DialogPrimitive.Title className="text-base font-bold text-foreground">
                   Tambah Foto Galeri
                 </DialogPrimitive.Title>
+
                 <p className="text-xs text-muted-foreground mt-0.5">Upload foto baru ke galeri</p>
               </div>
             </div>
+
             <DialogPrimitive.Close
               onClick={onClose}
               disabled={saving}
@@ -199,72 +255,60 @@ export function ModalTambahGaleri({ open, onClose, onSave, kategoris }: ModalTam
             </DialogPrimitive.Close>
           </div>
 
-          {/* Body */}
+          {/* CONTENT */}
           <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1">
-            {/* Image URL */}
+            {/* IMAGE */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <FieldLabel required htmlFor="tambah-image-url">
-                  <span className="flex items-center gap-1.5">
-                    <IconLink size={12} /> URL Gambar
-                  </span>
-                </FieldLabel>
-              </div>
-              <input
-                id="tambah-image-url"
-                type="url"
-                placeholder="https://example.com/foto.jpg"
-                value={imageUrl}
-                onChange={(e) => {
-                  setImageUrl(e.target.value)
-                  setPreviewError(false)
-                  setError((p) => ({ ...p, imageUrl: undefined as unknown as string }))
+              <FieldLabel required className="block mb-2">
+                Gambar
+              </FieldLabel>
+
+              <ImageUploader
+                onFileChange={async (f) => {
+                  setImageFile(f)
+
+                  setError((p) => ({
+                    ...p,
+                    imageUrl: '',
+                  }))
+
+                  if (f) {
+                    try {
+                      const dimensions = await getImageDimensions(f)
+
+                      setWidth(String(dimensions.width))
+                      setHeight(String(dimensions.height))
+                    } catch {
+                      setWidth('')
+                      setHeight('')
+                    }
+                  } else {
+                    setWidth('')
+                    setHeight('')
+                  }
                 }}
-                className={cn(
-                  inputBase,
-                  error.imageUrl
-                    ? 'border-destructive focus:ring-destructive/20 focus:border-destructive'
-                    : ''
-                )}
-                autoFocus
+                onUrlChange={(u) => {
+                  setImageUrl(u)
+
+                  setError((p) => ({
+                    ...p,
+                    imageUrl: '',
+                  }))
+                }}
+                urlValue={imageUrl}
+                fileValue={imageFile}
+                error={error.imageUrl}
+                disabled={saving}
               />
-              <FieldError message={error.imageUrl} />
             </div>
 
-            {/* Image Preview */}
-            {showPreview && (
-              <div className="rounded-xl border border-border bg-muted/30 overflow-hidden">
-                <div className="flex items-center gap-2 px-3 py-2 border-b border-border/50">
-                  <IconEye size={12} className="text-muted-foreground" />
-                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                    Pratinjau Gambar
-                  </span>
-                </div>
-                {!previewError ? (
-                  <div className="relative w-full h-48 bg-muted/50 flex items-center justify-center overflow-hidden">
-                    <Image
-                      src={imageUrl.trim()}
-                      alt="preview"
-                      fill
-                      className="object-contain"
-                      onError={() => setPreviewError(true)}
-                    />
-                  </div>
-                ) : (
-                  <div className="h-32 flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                    <IconPhoto size={28} className="opacity-40" />
-                    <p className="text-xs">Gagal memuat pratinjau gambar</p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Judul */}
+            {/* JUDUL */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <FieldLabel htmlFor="tambah-judul">
-                  Judul <span className="text-muted-foreground font-normal">(Opsional)</span>
+                <FieldLabel required htmlFor="tambah-judul">
+                  Judul
                 </FieldLabel>
+
                 <span
                   className={cn(
                     'text-xs tabular-nums',
@@ -274,29 +318,37 @@ export function ModalTambahGaleri({ open, onClose, onSave, kategoris }: ModalTam
                   {judul.length}/100
                 </span>
               </div>
+
               <input
                 id="tambah-judul"
                 maxLength={100}
-                placeholder="Judul foto..."
+                placeholder="Masukkan judul foto..."
                 value={judul}
+                disabled={saving}
                 onChange={(e) => {
                   setJudul(e.target.value)
-                  setError((p) => ({ ...p, judul: undefined as unknown as string }))
+
+                  setError((p) => ({
+                    ...p,
+                    judul: '',
+                  }))
                 }}
                 className={cn(
                   inputBase,
                   error.judul ? 'border-destructive focus:ring-destructive/20' : ''
                 )}
               />
+
               <FieldError message={error.judul} />
             </div>
 
-            {/* Deskripsi */}
+            {/* DESKRIPSI */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <FieldLabel htmlFor="tambah-deskripsi">
-                  Deskripsi <span className="text-muted-foreground font-normal">(Opsional)</span>
+                <FieldLabel required htmlFor="tambah-deskripsi">
+                  Deskripsi
                 </FieldLabel>
+
                 <span
                   className={cn(
                     'text-xs tabular-nums',
@@ -306,109 +358,138 @@ export function ModalTambahGaleri({ open, onClose, onSave, kategoris }: ModalTam
                   {deskripsi.length}/500
                 </span>
               </div>
+
               <textarea
                 id="tambah-deskripsi"
                 maxLength={500}
-                placeholder="Deskripsi singkat tentang foto ini..."
+                placeholder="Masukkan deskripsi foto..."
                 value={deskripsi}
+                disabled={saving}
                 onChange={(e) => {
                   setDeskripsi(e.target.value)
-                  setError((p) => ({ ...p, deskripsi: undefined as unknown as string }))
+
+                  setError((p) => ({
+                    ...p,
+                    deskripsi: '',
+                  }))
                 }}
                 className={cn(
                   textareaBase,
                   error.deskripsi ? 'border-destructive focus:ring-destructive/20' : ''
                 )}
               />
+
               <FieldError message={error.deskripsi} />
             </div>
 
-            {/* Kategori */}
+            {/* TANGGAL */}
             <div>
-              <FieldLabel htmlFor="tambah-kategori" className="block mb-1.5">
+              <FieldLabel className="block mb-1.5">Tanggal Upload</FieldLabel>
+
+              <input
+                type="datetime-local"
+                value={createdAt}
+                disabled={saving}
+                onChange={(e) => setCreatedAt(e.target.value)}
+                className={inputBase}
+              />
+            </div>
+
+            {/* KATEGORI */}
+            <div>
+              <FieldLabel required htmlFor="tambah-kategori" className="flex mb-1.5">
                 <span className="flex items-center gap-1.5">
-                  <IconTag size={12} /> Kategori{' '}
-                  <span className="text-muted-foreground font-normal">(Opsional)</span>
+                  <IconTag size={12} />
+                  Kategori
                 </span>
               </FieldLabel>
+
               <select
                 id="tambah-kategori"
                 value={kategoriId}
-                onChange={(e) => setKategoriId(e.target.value)}
-                className={cn(inputBase, 'cursor-pointer')}
+                disabled={saving}
+                onChange={(e) => {
+                  setKategoriId(e.target.value)
+
+                  setError((p) => ({
+                    ...p,
+                    kategoriId: '',
+                  }))
+                }}
+                className={cn(
+                  inputBase,
+                  'cursor-pointer',
+                  error.kategoriId ? 'border-destructive focus:ring-destructive/20' : ''
+                )}
               >
-                <option value="">— Tanpa Kategori —</option>
+                <option value="">— Pilih Kategori —</option>
+
                 {kategoris.map((k) => (
                   <option key={k.id} value={k.id}>
                     {k.nama}
                   </option>
                 ))}
               </select>
+
+              <FieldError message={error.kategoriId} />
+
               {selectedKategori && kategoriStyle && (
-                <div className="mt-2 flex items-center gap-1.5">
-                  <span
-                    className={cn(
-                      'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-secondary/50 border-border dark:bg-white/5 dark:border-white/10'
-                    )}
-                  >
+                <div className="mt-2">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-secondary/50 border-border dark:bg-white/5 dark:border-white/10">
                     <span className={`w-1.5 h-1.5 rounded-full ${kategoriStyle.dot}`} />
+
                     <span className={kategoriStyle.text}>{selectedKategori.nama}</span>
                   </span>
                 </div>
               )}
             </div>
 
-            {/* Dimensi */}
+            {/* DIMENSI */}
             <div>
               <FieldLabel className="block mb-1.5">
                 <span className="flex items-center gap-1.5">
-                  <IconDimensions size={12} /> Dimensi{' '}
-                  <span className="text-muted-foreground font-normal">(Opsional)</span>
+                  <IconDimensions size={12} />
+                  Dimensi Gambar
                 </span>
               </FieldLabel>
+
               <div className="grid grid-cols-2 gap-3">
-                <div>
+                <div className="relative">
                   <input
-                    type="number"
-                    min={1}
-                    placeholder="Lebar (px)"
-                    value={width}
-                    onChange={(e) => {
-                      setWidth(e.target.value)
-                      setError((p) => ({ ...p, width: undefined as unknown as string }))
-                    }}
-                    className={cn(
-                      inputBase,
-                      error.width ? 'border-destructive focus:ring-destructive/20' : ''
-                    )}
+                    type="text"
+                    value={width ? `${width}px` : '-'}
+                    disabled
+                    className={cn(inputBase, 'pr-10 bg-muted/40')}
                   />
-                  <FieldError message={error.width} />
+
+                  <IconLock
+                    size={14}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  />
                 </div>
-                <div>
+
+                <div className="relative">
                   <input
-                    type="number"
-                    min={1}
-                    placeholder="Tinggi (px)"
-                    value={height}
-                    onChange={(e) => {
-                      setHeight(e.target.value)
-                      setError((p) => ({ ...p, height: undefined as unknown as string }))
-                    }}
-                    className={cn(
-                      inputBase,
-                      error.height ? 'border-destructive focus:ring-destructive/20' : ''
-                    )}
+                    type="text"
+                    value={height ? `${height}px` : '-'}
+                    disabled
+                    className={cn(inputBase, 'pr-10 bg-muted/40')}
                   />
-                  <FieldError message={error.height} />
+
+                  <IconLock
+                    size={14}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  />
                 </div>
               </div>
+
               <p className="text-[10px] text-muted-foreground mt-1">
-                Isi dimensi jika diketahui. Berguna untuk optimasi layout.
+                Dimensi otomatis terdeteksi dari gambar dan tidak dapat diubah.
               </p>
             </div>
           </div>
 
-          {/* Footer */}
+          {/* FOOTER */}
           <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border bg-muted/20 shrink-0">
             <button
               type="button"
@@ -418,10 +499,11 @@ export function ModalTambahGaleri({ open, onClose, onSave, kategoris }: ModalTam
             >
               Batal
             </button>
+
             <button
               type="button"
               onClick={handleSave}
-              disabled={saving || !imageUrl.trim()}
+              disabled={saving || !hasImage || !judul.trim() || !deskripsi.trim() || !kategoriId}
               className="flex items-center gap-2 px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
             >
               {saving ? (

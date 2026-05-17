@@ -8,19 +8,15 @@ import {
   IconX,
   IconCheck,
   IconLoader2,
-  IconPhoto,
-  IconLink,
-  IconDimensions,
   IconTag,
+  IconDimensions,
   IconAlertCircle,
-  IconEye,
   IconFileDescription,
+  IconLink,
 } from '@tabler/icons-react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { updateGaleri, getKategoriStyle, type GaleriWithKategori } from '@/lib/galeri'
-import Image from 'next/image'
-
-// ─── Reusable UI ─────────────────────────────────────────────────────────────
+import { ImageUploader } from '@/components/protected/galeri/image-uploader'
 
 function FieldLabel({
   children,
@@ -30,15 +26,16 @@ function FieldLabel({
   return (
     <label {...props} className={cn('text-xs font-semibold text-foreground', props.className)}>
       {children}
-      {required && <span className="text-destructive ml-0.5">*</span>}
+      {required && <span className="ml-0.5 text-destructive">*</span>}
     </label>
   )
 }
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null
+
   return (
-    <p className="mt-1.5 text-xs text-destructive flex items-center gap-1">
+    <p className="mt-1.5 flex items-center gap-1 text-xs text-destructive">
       <IconAlertCircle size={11} />
       {message}
     </p>
@@ -46,14 +43,41 @@ function FieldError({ message }: { message?: string }) {
 }
 
 const inputBase = cn(
-  'w-full px-3 py-2.5 rounded-lg border border-border bg-background text-sm text-foreground',
+  'w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground',
   'placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20',
-  'focus:border-primary transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
+  'focus:border-primary transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50'
 )
 
 const textareaBase = cn(inputBase, 'min-h-[80px] max-h-[120px] resize-y leading-relaxed')
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+async function getImageDimensions(src: string): Promise<{
+  width: number
+  height: number
+}> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image()
+
+    img.onload = () => {
+      resolve({
+        width: img.naturalWidth,
+        height: img.naturalHeight,
+      })
+    }
+
+    img.onerror = reject
+    img.src = src
+  })
+}
+
+async function extractFileDimensions(file: File) {
+  const objectUrl = URL.createObjectURL(file)
+
+  try {
+    return await getImageDimensions(objectUrl)
+  } finally {
+    URL.revokeObjectURL(objectUrl)
+  }
+}
 
 interface GaleriKategoriOption {
   id: string
@@ -68,8 +92,6 @@ export interface ModalEditGaleriProps {
   kategoris: GaleriKategoriOption[]
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export function ModalEditGaleri({
   open,
   onClose,
@@ -78,52 +100,80 @@ export function ModalEditGaleri({
   kategoris,
 }: ModalEditGaleriProps) {
   const [imageUrl, setImageUrl] = useState(galeri.image_url)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+
   const [judul, setJudul] = useState(galeri.judul ?? '')
   const [deskripsi, setDeskripsi] = useState(galeri.deskripsi ?? '')
-  const [kategoriId, setKategoriId] = useState<string>(galeri.galeri_kategori_id ?? '')
-  const [width, setWidth] = useState<string>(galeri.width?.toString() ?? '')
-  const [height, setHeight] = useState<string>(galeri.height?.toString() ?? '')
+  const [kategoriId, setKategoriId] = useState(galeri.galeri_kategori_id ?? '')
+
+  const [width, setWidth] = useState(galeri.width?.toString() ?? '')
+  const [height, setHeight] = useState(galeri.height?.toString() ?? '')
+
   const [saving, setSaving] = useState(false)
-  const [previewError, setPreviewError] = useState(false)
   const [error, setError] = useState<Record<string, string>>({})
+
+  const [createdAt, setCreatedAt] = useState(
+    galeri.created_at ? new Date(galeri.created_at).toISOString().slice(0, 16) : ''
+  )
 
   useEffect(() => {
     if (open) {
       setImageUrl(galeri.image_url)
+      setImageFile(null)
+
       setJudul(galeri.judul ?? '')
       setDeskripsi(galeri.deskripsi ?? '')
       setKategoriId(galeri.galeri_kategori_id ?? '')
+
       setWidth(galeri.width?.toString() ?? '')
       setHeight(galeri.height?.toString() ?? '')
+
+      setCreatedAt(galeri.created_at ? new Date(galeri.created_at).toISOString().slice(0, 16) : '')
+
       setSaving(false)
-      setPreviewError(false)
       setError({})
     }
   }, [open, galeri])
 
   const isDirty =
+    !!imageFile ||
     imageUrl.trim() !== galeri.image_url ||
     judul.trim() !== (galeri.judul ?? '') ||
     deskripsi.trim() !== (galeri.deskripsi ?? '') ||
     kategoriId !== (galeri.galeri_kategori_id ?? '') ||
-    width !== (galeri.width?.toString() ?? '') ||
-    height !== (galeri.height?.toString() ?? '')
+    createdAt !== (galeri.created_at ? new Date(galeri.created_at).toISOString().slice(0, 16) : '')
 
   const validate = () => {
     const newErr: Record<string, string> = {}
-    if (!imageUrl.trim()) newErr.imageUrl = 'URL gambar tidak boleh kosong'
-    else if (!/^https?:\/\/.+/.test(imageUrl.trim())) newErr.imageUrl = 'URL gambar tidak valid'
-    if (judul.trim().length > 100) newErr.judul = 'Judul maksimal 100 karakter'
-    if (deskripsi.length > 500) newErr.deskripsi = 'Deskripsi maksimal 500 karakter'
-    if (width && (isNaN(Number(width)) || Number(width) <= 0))
-      newErr.width = 'Lebar harus berupa angka positif'
-    if (height && (isNaN(Number(height)) || Number(height) <= 0))
-      newErr.height = 'Tinggi harus berupa angka positif'
+
+    if (!imageFile && !imageUrl.trim()) {
+      newErr.imageUrl = 'Pilih file atau masukkan URL gambar'
+    } else if (!imageFile && !/^https?:\/\/.+/.test(imageUrl.trim())) {
+      newErr.imageUrl = 'URL gambar tidak valid'
+    }
+
+    if (!judul.trim()) {
+      newErr.judul = 'Judul wajib diisi'
+    } else if (judul.trim().length > 100) {
+      newErr.judul = 'Judul maksimal 100 karakter'
+    }
+
+    if (!deskripsi.trim()) {
+      newErr.deskripsi = 'Deskripsi wajib diisi'
+    } else if (deskripsi.length > 500) {
+      newErr.deskripsi = 'Deskripsi maksimal 500 karakter'
+    }
+
+    if (!kategoriId) {
+      newErr.kategoriId = 'Kategori wajib dipilih'
+    }
+
     return newErr
   }
 
   const handleSave = async () => {
     const errs = validate()
+
     if (Object.keys(errs).length > 0) {
       setError(errs)
       return
@@ -138,35 +188,46 @@ export function ModalEditGaleri({
     setError({})
 
     try {
-      const result = await updateGaleri(galeri.id, {
-        image_url: imageUrl.trim(),
-        judul: judul.trim() || null,
-        deskripsi: deskripsi.trim() || null,
-        galeri_kategori_id: kategoriId || null,
-        width: width ? Number(width) : null,
-        height: height ? Number(height) : null,
-      })
+      const result = await updateGaleri(
+        galeri.id,
+        {
+          image_url: imageFile ? undefined : imageUrl.trim(),
+          judul: judul.trim(),
+          deskripsi: deskripsi.trim(),
+          galeri_kategori_id: kategoriId,
+          width: width ? Number(width) : null,
+          height: height ? Number(height) : null,
+          created_at: new Date(createdAt).toISOString(),
+        },
+        imageFile ?? undefined,
+        imageFile ? galeri.image_url : undefined
+      )
 
       onUpdate(result)
+
       toast.success('Foto berhasil diperbarui', {
-        description: result.judul
-          ? `"${result.judul}" telah diperbarui.`
-          : 'Data foto telah diperbarui.',
+        description: `"${result.judul}" telah diperbarui.`,
         duration: 3000,
       })
+
       onClose()
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Terjadi kesalahan pada server.'
+
       setError({ imageUrl: msg })
-      toast.error('Gagal memperbarui foto', { description: msg, duration: 5000 })
+
+      toast.error('Gagal memperbarui foto', {
+        description: msg,
+        duration: 5000,
+      })
     } finally {
       setSaving(false)
     }
   }
 
   const selectedKategori = kategoris.find((k) => k.id === kategoriId)
+
   const kategoriStyle = selectedKategori ? getKategoriStyle(selectedKategori.nama) : null
-  const showPreview = imageUrl.trim() && /^https?:\/\/.+/.test(imageUrl.trim())
 
   return (
     <DialogPrimitive.Root
@@ -177,6 +238,7 @@ export function ModalEditGaleri({
     >
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 duration-200" />
+
         <DialogPrimitive.Content
           onInteractOutside={(e) => {
             e.preventDefault()
@@ -188,110 +250,115 @@ export function ModalEditGaleri({
           }}
           className={cn(
             'fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%]',
-            'w-full max-w-lg flex flex-col max-h-[90vh]',
-            'bg-card border border-border rounded-2xl shadow-2xl',
+            'flex max-h-[90vh] w-full max-w-lg flex-col',
+            'rounded-2xl border border-border bg-card shadow-2xl',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
             'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
-            'data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]',
-            'data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]',
             'duration-200'
           )}
         >
-          {/* Header */}
-          <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-border shrink-0">
+          <div className="flex items-start justify-between border-b border-border px-6 pb-4 pt-5 shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 shrink-0">
                 <IconEdit size={16} className="text-primary" />
               </div>
+
               <div>
                 <DialogPrimitive.Title className="text-base font-bold text-foreground">
                   Edit Foto Galeri
                 </DialogPrimitive.Title>
-                <p className="text-xs text-muted-foreground mt-0.5 font-mono truncate max-w-[220px]">
+
+                <p className="mt-0.5 max-w-[220px] truncate text-xs text-muted-foreground">
                   {galeri.judul || galeri.id}
                 </p>
               </div>
             </div>
+
             <div className="flex items-center gap-1">
               {isDirty && (
-                <span className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                <span className="flex items-center gap-1 rounded-full border border-amber-200 bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" />
                   Ada perubahan
                 </span>
               )}
+
               <DialogPrimitive.Close
                 onClick={onClose}
                 disabled={saving}
-                className="rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors p-1.5 disabled:opacity-40 ml-1"
+                className="ml-1 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
               >
                 <IconX size={16} />
               </DialogPrimitive.Close>
             </div>
           </div>
 
-          {/* Body */}
-          <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1">
-            {/* Image URL */}
+          <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
             <div>
-              <FieldLabel required htmlFor="edit-image-url" className="block mb-1.5">
-                <span className="flex items-center gap-1.5">
-                  <IconLink size={12} /> URL Gambar
-                </span>
+              <FieldLabel required className="mb-2 block">
+                Gambar
               </FieldLabel>
-              <input
-                id="edit-image-url"
-                type="url"
-                placeholder="https://example.com/foto.jpg"
-                value={imageUrl}
-                onChange={(e) => {
-                  setImageUrl(e.target.value)
-                  setPreviewError(false)
-                  setError((p) => ({ ...p, imageUrl: undefined as unknown as string }))
+
+              <ImageUploader
+                currentUrl={galeri.image_url}
+                onFileChange={async (f) => {
+                  setImageFile(f)
+
+                  setError((p) => ({
+                    ...p,
+                    imageUrl: '',
+                  }))
+
+                  if (f) {
+                    try {
+                      const dimensions = await extractFileDimensions(f)
+
+                      setWidth(dimensions.width.toString())
+                      setHeight(dimensions.height.toString())
+                    } catch {
+                      toast.error('Gagal membaca dimensi gambar')
+                    }
+                  }
                 }}
-                className={cn(
-                  inputBase,
-                  error.imageUrl ? 'border-destructive focus:ring-destructive/20' : ''
-                )}
-                autoFocus
+                onUrlChange={async (u) => {
+                  setImageUrl(u)
+
+                  setError((p) => ({
+                    ...p,
+                    imageUrl: '',
+                  }))
+
+                  if (/^https?:\/\/.+/.test(u.trim())) {
+                    try {
+                      const dimensions = await getImageDimensions(u.trim())
+
+                      setWidth(dimensions.width.toString())
+                      setHeight(dimensions.height.toString())
+                    } catch {
+                      // ignore
+                    }
+                  }
+                }}
+                urlValue={imageUrl}
+                fileValue={imageFile}
+                error={error.imageUrl}
+                disabled={saving}
               />
-              <FieldError message={error.imageUrl} />
+
+              {imageFile && (
+                <p className="mt-1.5 flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400">
+                  <IconLink size={10} />
+                  File baru akan menggantikan gambar lama di storage
+                </p>
+              )}
             </div>
 
-            {/* Image Preview */}
-            {showPreview && (
-              <div className="rounded-xl border border-border bg-muted/30 overflow-hidden">
-                <div className="flex items-center gap-2 px-3 py-2 border-b border-border/50">
-                  <IconEye size={12} className="text-muted-foreground" />
-                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                    Pratinjau Gambar
-                  </span>
-                </div>
-                {!previewError ? (
-                  <div className="relative w-full h-48 bg-muted/50 flex items-center justify-center overflow-hidden">
-                    <Image
-                      src={imageUrl.trim()}
-                      alt="preview"
-                      fill
-                      className="object-contain"
-                      onError={() => setPreviewError(true)}
-                    />
-                  </div>
-                ) : (
-                  <div className="h-32 flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                    <IconPhoto size={28} className="opacity-40" />
-                    <p className="text-xs">Gagal memuat pratinjau gambar</p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Judul */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <FieldLabel htmlFor="edit-judul">
-                  Judul <span className="text-muted-foreground font-normal">(Opsional)</span>
+              <div className="mb-1.5 flex items-center justify-between">
+                <FieldLabel required htmlFor="edit-judul">
+                  Judul
                 </FieldLabel>
+
                 <span
                   className={cn(
                     'text-xs tabular-nums',
@@ -301,29 +368,36 @@ export function ModalEditGaleri({
                   {judul.length}/100
                 </span>
               </div>
+
               <input
                 id="edit-judul"
                 maxLength={100}
-                placeholder="Judul foto..."
+                placeholder="Masukkan judul foto..."
                 value={judul}
+                disabled={saving}
                 onChange={(e) => {
                   setJudul(e.target.value)
-                  setError((p) => ({ ...p, judul: undefined as unknown as string }))
+
+                  setError((p) => ({
+                    ...p,
+                    judul: '',
+                  }))
                 }}
                 className={cn(
                   inputBase,
                   error.judul ? 'border-destructive focus:ring-destructive/20' : ''
                 )}
               />
+
               <FieldError message={error.judul} />
             </div>
 
-            {/* Deskripsi */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <FieldLabel htmlFor="edit-deskripsi">
-                  Deskripsi <span className="text-muted-foreground font-normal">(Opsional)</span>
+              <div className="mb-1.5 flex items-center justify-between">
+                <FieldLabel required htmlFor="edit-deskripsi">
+                  Deskripsi
                 </FieldLabel>
+
                 <span
                   className={cn(
                     'text-xs tabular-nums',
@@ -333,153 +407,168 @@ export function ModalEditGaleri({
                   {deskripsi.length}/500
                 </span>
               </div>
+
               <textarea
                 id="edit-deskripsi"
                 maxLength={500}
-                placeholder="Deskripsi singkat tentang foto ini..."
+                placeholder="Masukkan deskripsi foto..."
                 value={deskripsi}
+                disabled={saving}
                 onChange={(e) => {
                   setDeskripsi(e.target.value)
-                  setError((p) => ({ ...p, deskripsi: undefined as unknown as string }))
+
+                  setError((p) => ({
+                    ...p,
+                    deskripsi: '',
+                  }))
                 }}
                 className={cn(
                   textareaBase,
                   error.deskripsi ? 'border-destructive focus:ring-destructive/20' : ''
                 )}
               />
+
               <FieldError message={error.deskripsi} />
             </div>
 
-            {/* Kategori */}
             <div>
-              <FieldLabel htmlFor="edit-kategori" className="block mb-1.5">
+              <FieldLabel className="mb-1.5 block">Tanggal Upload</FieldLabel>
+
+              <input
+                type="datetime-local"
+                value={createdAt}
+                disabled={saving}
+                onChange={(e) => setCreatedAt(e.target.value)}
+                className={inputBase}
+              />
+            </div>
+
+            <div>
+              <FieldLabel required htmlFor="edit-kategori" className="mb-1.5 flex">
                 <span className="flex items-center gap-1.5">
-                  <IconTag size={12} /> Kategori{' '}
-                  <span className="text-muted-foreground font-normal">(Opsional)</span>
+                  <IconTag size={12} />
+                  Kategori
                 </span>
               </FieldLabel>
+
               <select
                 id="edit-kategori"
                 value={kategoriId}
-                onChange={(e) => setKategoriId(e.target.value)}
-                className={cn(inputBase, 'cursor-pointer')}
+                disabled={saving}
+                onChange={(e) => {
+                  setKategoriId(e.target.value)
+
+                  setError((p) => ({
+                    ...p,
+                    kategoriId: '',
+                  }))
+                }}
+                className={cn(
+                  inputBase,
+                  'cursor-pointer',
+                  error.kategoriId ? 'border-destructive focus:ring-destructive/20' : ''
+                )}
               >
-                <option value="">— Tanpa Kategori —</option>
+                <option value="">— Pilih Kategori —</option>
+
                 {kategoris.map((k) => (
                   <option key={k.id} value={k.id}>
                     {k.nama}
                   </option>
                 ))}
               </select>
+
+              <FieldError message={error.kategoriId} />
+
               {selectedKategori && kategoriStyle && (
-                <div className="mt-2 flex items-center gap-1.5">
-                  <span
-                    className={cn(
-                      'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-secondary/50 border-border dark:bg-white/5 dark:border-white/10'
-                    )}
-                  >
-                    <span className={`w-1.5 h-1.5 rounded-full ${kategoriStyle.dot}`} />
+                <div className="mt-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary/50 px-2.5 py-1 text-xs font-medium dark:border-white/10 dark:bg-white/5">
+                    <span className={cn('h-1.5 w-1.5 rounded-full', kategoriStyle.dot)} />
                     <span className={kategoriStyle.text}>{selectedKategori.nama}</span>
                   </span>
                 </div>
               )}
             </div>
 
-            {/* Dimensi */}
             <div>
-              <FieldLabel className="block mb-1.5">
+              <FieldLabel className="mb-1.5 block">
                 <span className="flex items-center gap-1.5">
-                  <IconDimensions size={12} /> Dimensi{' '}
-                  <span className="text-muted-foreground font-normal">(Opsional)</span>
+                  <IconDimensions size={12} />
+                  Dimensi Gambar
                 </span>
               </FieldLabel>
+
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <input
-                    type="number"
-                    min={1}
-                    placeholder="Lebar (px)"
-                    value={width}
-                    onChange={(e) => {
-                      setWidth(e.target.value)
-                      setError((p) => ({ ...p, width: undefined as unknown as string }))
-                    }}
-                    className={cn(
-                      inputBase,
-                      error.width ? 'border-destructive focus:ring-destructive/20' : ''
-                    )}
-                  />
-                  <FieldError message={error.width} />
-                </div>
-                <div>
-                  <input
-                    type="number"
-                    min={1}
-                    placeholder="Tinggi (px)"
-                    value={height}
-                    onChange={(e) => {
-                      setHeight(e.target.value)
-                      setError((p) => ({ ...p, height: undefined as unknown as string }))
-                    }}
-                    className={cn(
-                      inputBase,
-                      error.height ? 'border-destructive focus:ring-destructive/20' : ''
-                    )}
-                  />
-                  <FieldError message={error.height} />
-                </div>
+                <input
+                  value={width}
+                  disabled
+                  readOnly
+                  className={cn(inputBase, 'bg-muted/40')}
+                  placeholder="Lebar otomatis"
+                />
+
+                <input
+                  value={height}
+                  disabled
+                  readOnly
+                  className={cn(inputBase, 'bg-muted/40')}
+                  placeholder="Tinggi otomatis"
+                />
               </div>
+
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                Dimensi diambil otomatis dari gambar dan tidak dapat diubah manual.
+              </p>
             </div>
 
-            {/* Perubahan preview */}
             {isDirty && (
-              <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-2">
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+              <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-4">
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                   Perubahan
                 </p>
-                {imageUrl.trim() !== galeri.image_url && (
+
+                {imageFile && (
                   <div className="flex items-center gap-2 text-xs">
-                    <IconLink size={11} className="text-muted-foreground shrink-0" />
-                    <span className="text-muted-foreground line-through truncate max-w-[120px] opacity-60">
-                      {galeri.image_url}
-                    </span>
-                    <span className="text-muted-foreground">→</span>
-                    <span className="text-foreground truncate max-w-[120px]">
-                      {imageUrl.trim()}
+                    <IconLink size={11} className="shrink-0 text-muted-foreground" />
+
+                    <span className="text-muted-foreground">Gambar baru:</span>
+
+                    <span className="max-w-[160px] truncate font-medium text-foreground">
+                      {imageFile.name}
                     </span>
                   </div>
                 )}
+
                 {judul.trim() !== (galeri.judul ?? '') && (
                   <div className="flex items-center gap-2 text-xs">
-                    <IconFileDescription size={11} className="text-muted-foreground shrink-0" />
-                    <span className="text-muted-foreground line-through opacity-60">
-                      {galeri.judul || '(kosong)'}
-                    </span>
+                    <IconFileDescription size={11} className="shrink-0 text-muted-foreground" />
+
+                    <span className="line-through opacity-60">{galeri.judul || '(kosong)'}</span>
+
                     <span className="text-muted-foreground">→</span>
-                    <span className="text-foreground font-medium">
-                      {judul.trim() || '(kosong)'}
-                    </span>
+
+                    <span className="font-medium text-foreground">{judul.trim()}</span>
                   </div>
                 )}
               </div>
             )}
           </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border bg-muted/20 shrink-0">
+          <div className="flex items-center justify-end gap-2 border-t border-border bg-muted/20 px-6 py-4 shrink-0">
             <button
               type="button"
               onClick={onClose}
               disabled={saving}
-              className="px-4 py-2 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
             >
               Batal
             </button>
+
             <button
               type="button"
               onClick={handleSave}
-              disabled={saving || !imageUrl.trim() || !isDirty}
-              className="flex items-center gap-2 px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
+              disabled={saving || !isDirty}
+              className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
             >
               {saving ? (
                 <>
