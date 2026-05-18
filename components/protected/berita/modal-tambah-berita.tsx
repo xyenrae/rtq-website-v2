@@ -388,6 +388,17 @@ function Step2({ ringkasan, konten, errors, onChange }: Step2Props) {
           )}
         />
         <FieldError message={errors.konten} />
+        {/* Info waktu baca */}
+        <div className="flex items-start gap-3 p-4 rounded-xl border border-border bg-muted/30">
+          <Clock className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-foreground">Estimasi Waktu Baca Otomatis</p>
+            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+              Waktu baca dihitung otomatis dari panjang konten (~200 kata/menit, rata-rata 5
+              karakter/kata = 1.000 karakter/menit). Tidak perlu diisi manual.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -603,23 +614,11 @@ function Step3({
               <X className="h-3.5 w-3.5" />
             </button>
 
-            <div className="absolute bottom-0 inset-x-0 z-10 px-3 py-2 bg-gradient-to-t from-black/40 to-transparent pointer-events-none">
+            <div className="absolute bottom-0 inset-x-0 z-10 px-3 py-2 bg-linear-to-t from-black/40 to-transparent pointer-events-none">
               <p className="text-xs text-white font-medium">Pratinjau Thumbnail</p>
             </div>
           </div>
         )}
-      </div>
-
-      {/* Info waktu baca */}
-      <div className="flex items-start gap-3 p-4 rounded-xl border border-border bg-muted/30">
-        <Clock className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-        <div>
-          <p className="text-sm font-semibold text-foreground">Estimasi Waktu Baca Otomatis</p>
-          <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-            Waktu baca dihitung otomatis dari panjang konten (~200 kata/menit, rata-rata 5
-            karakter/kata = 1.000 karakter/menit). Tidak perlu diisi manual.
-          </p>
-        </div>
       </div>
     </div>
   )
@@ -708,7 +707,6 @@ function Step4({
         <input
           id="tanggalDiterbitkan"
           type="datetime-local"
-          min={today}
           value={tanggalDiterbitkan}
           onChange={(e) => onChange('tanggalDiterbitkan', e.target.value)}
           className={inputBase}
@@ -784,7 +782,7 @@ function ConfirmDialog({
 }: ConfirmDialogProps) {
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 pointer-events-none">
+    <div className="fixed inset-0 z-100 flex items-center justify-center p-4 pointer-events-none">
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm pointer-events-auto"
         onClick={onCancel}
@@ -1030,13 +1028,16 @@ export function ModalTambahBerita({ open, onClose, onSave, kategoris }: ModalTam
     setSaveError(null)
 
     try {
-      // Upload gambar ke Supabase Storage jika ada file
       let gambarUrl: string | null = form.thumbnail || null
       if (form.thumbnailFile) {
         gambarUrl = await uploadGambar(form.thumbnailFile)
       }
 
       const waktuBaca = estimateReadTime(form.konten)
+
+      const publishDate = form.tanggalDiterbitkan
+        ? new Date(form.tanggalDiterbitkan).toISOString()
+        : null
 
       const result = await insertBerita({
         judul: form.judul.trim(),
@@ -1048,6 +1049,9 @@ export function ModalTambahBerita({ open, onClose, onSave, kategoris }: ModalTam
         status: form.status,
         kategori_id: kategoriObj.id,
         views: 0,
+
+        tanggal_diterbitkan: publishDate,
+        created_at: publishDate || new Date().toISOString(),
       })
 
       onSave(result)

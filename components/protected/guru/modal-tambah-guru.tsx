@@ -12,12 +12,12 @@ import {
   IconLink,
   IconBriefcase,
   IconAlertCircle,
-  IconEye,
-  IconPhoto,
 } from '@tabler/icons-react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
+
 import { insertGuru, type Guru } from '@/lib/guru'
-import Image from 'next/image'
+
+import { ImageUploader } from '@/components/image-uploader'
 
 // ─── Reusable UI ─────────────────────────────────────────────────────────────
 
@@ -28,14 +28,22 @@ function FieldLabel({
 }: React.LabelHTMLAttributes<HTMLLabelElement> & { required?: boolean }) {
   return (
     <label {...props} className={cn('text-xs font-semibold text-foreground', props.className)}>
-      {children}
-      {required && <span className="text-destructive ml-0.5">*</span>}
+      <span className="flex items-center gap-1">
+        {children}
+
+        {required && (
+          <span className="text-destructive text-sm font-bold" title="Wajib diisi">
+            *
+          </span>
+        )}
+      </span>
     </label>
   )
 }
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null
+
   return (
     <p className="mt-1.5 text-xs text-destructive flex items-center gap-1">
       <IconAlertCircle size={11} />
@@ -50,7 +58,7 @@ const inputBase = cn(
   'focus:border-primary transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
 )
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface ModalTambahGuruProps {
   open: boolean
@@ -58,14 +66,17 @@ export interface ModalTambahGuruProps {
   onSave: (guru: Guru) => void
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── Component ───────────────────────────────────────────────────────────────
 
 export function ModalTambahGuru({ open, onClose, onSave }: ModalTambahGuruProps) {
   const [nama, setNama] = useState('')
   const [jabatan, setJabatan] = useState('')
+
   const [imageUrl, setImageUrl] = useState('')
+  const [imageFile, setImageFile] = useState<File | null>(null)
+
   const [saving, setSaving] = useState(false)
-  const [previewError, setPreviewError] = useState(false)
+
   const [error, setError] = useState<Record<string, string>>({})
 
   useEffect(() => {
@@ -73,24 +84,44 @@ export function ModalTambahGuru({ open, onClose, onSave }: ModalTambahGuruProps)
       setNama('')
       setJabatan('')
       setImageUrl('')
+      setImageFile(null)
       setSaving(false)
-      setPreviewError(false)
       setError({})
     }
   }, [open])
 
   const validate = () => {
     const errs: Record<string, string> = {}
-    if (!nama.trim()) errs.nama = 'Nama guru tidak boleh kosong'
-    else if (nama.trim().length > 100) errs.nama = 'Nama maksimal 100 karakter'
-    if (jabatan.trim().length > 100) errs.jabatan = 'Jabatan maksimal 100 karakter'
-    if (imageUrl.trim() && !/^https?:\/\/.+/.test(imageUrl.trim()))
+
+    // Nama wajib
+    if (!nama.trim()) {
+      errs.nama = 'Nama guru wajib diisi'
+    } else if (nama.trim().length > 100) {
+      errs.nama = 'Nama maksimal 100 karakter'
+    }
+
+    // Jabatan wajib
+    if (!jabatan.trim()) {
+      errs.jabatan = 'Jabatan wajib diisi'
+    } else if (jabatan.trim().length > 100) {
+      errs.jabatan = 'Jabatan maksimal 100 karakter'
+    }
+
+    // Foto wajib
+    if (!imageFile && !imageUrl.trim()) {
+      errs.imageUrl = 'Foto profil wajib diisi'
+    }
+
+    if (imageUrl.trim() && !imageFile && !/^https?:\/\/.+/.test(imageUrl.trim())) {
       errs.imageUrl = 'URL foto tidak valid'
+    }
+
     return errs
   }
 
   const handleSave = async () => {
     const errs = validate()
+
     if (Object.keys(errs).length > 0) {
       setError(errs)
       return
@@ -100,38 +131,51 @@ export function ModalTambahGuru({ open, onClose, onSave }: ModalTambahGuruProps)
     setError({})
 
     try {
-      const result = await insertGuru({
-        nama: nama.trim(),
-        jabatan: jabatan.trim() || null,
-        image_url: imageUrl.trim() || null,
-      })
+      const result = await insertGuru(
+        {
+          nama: nama.trim(),
+          jabatan: jabatan.trim(),
+          image_url: imageFile ? null : imageUrl.trim(),
+        },
+        imageFile ?? undefined
+      )
 
       onSave(result)
+
       toast.success('Guru berhasil ditambahkan', {
         description: `"${result.nama}" telah ditambahkan ke daftar guru.`,
         duration: 3000,
       })
+
       onClose()
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Terjadi kesalahan pada server.'
-      setError({ nama: msg })
-      toast.error('Gagal menambahkan guru', { description: msg, duration: 5000 })
+
+      setError({
+        nama: msg,
+      })
+
+      toast.error('Gagal menambahkan guru', {
+        description: msg,
+        duration: 5000,
+      })
     } finally {
       setSaving(false)
     }
   }
 
-  const showPreview = imageUrl.trim() && /^https?:\/\/.+/.test(imageUrl.trim())
-
   return (
     <DialogPrimitive.Root
       open={open}
       onOpenChange={(isOpen) => {
-        if (!isOpen && open) onClose()
+        if (!isOpen && open) {
+          onClose()
+        }
       }}
     >
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 duration-200" />
+
         <DialogPrimitive.Content
           onInteractOutside={(e) => {
             e.preventDefault()
@@ -159,15 +203,16 @@ export function ModalTambahGuru({ open, onClose, onSave }: ModalTambahGuruProps)
               <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                 <IconPlus size={18} className="text-primary" />
               </div>
+
               <div>
                 <DialogPrimitive.Title className="text-base font-bold text-foreground">
                   Tambah Guru
                 </DialogPrimitive.Title>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Tambah data guru baru ke daftar
-                </p>
+
+                <p className="text-xs text-muted-foreground mt-0.5">Tambahkan data guru baru</p>
               </div>
             </div>
+
             <DialogPrimitive.Close
               onClick={onClose}
               disabled={saving}
@@ -184,9 +229,11 @@ export function ModalTambahGuru({ open, onClose, onSave }: ModalTambahGuruProps)
               <div className="flex items-center justify-between mb-1.5">
                 <FieldLabel required htmlFor="tambah-nama">
                   <span className="flex items-center gap-1.5">
-                    <IconUser size={12} /> Nama Guru
+                    <IconUser size={12} />
+                    Nama Guru
                   </span>
                 </FieldLabel>
+
                 <span
                   className={cn(
                     'text-xs tabular-nums',
@@ -196,6 +243,7 @@ export function ModalTambahGuru({ open, onClose, onSave }: ModalTambahGuruProps)
                   {nama.length}/100
                 </span>
               </div>
+
               <input
                 id="tambah-nama"
                 type="text"
@@ -204,7 +252,11 @@ export function ModalTambahGuru({ open, onClose, onSave }: ModalTambahGuruProps)
                 value={nama}
                 onChange={(e) => {
                   setNama(e.target.value)
-                  setError((p) => ({ ...p, nama: undefined as unknown as string }))
+
+                  setError((p) => ({
+                    ...p,
+                    nama: '',
+                  }))
                 }}
                 className={cn(
                   inputBase,
@@ -214,18 +266,20 @@ export function ModalTambahGuru({ open, onClose, onSave }: ModalTambahGuruProps)
                 )}
                 autoFocus
               />
+
               <FieldError message={error.nama} />
             </div>
 
             {/* Jabatan */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <FieldLabel htmlFor="tambah-jabatan">
+                <FieldLabel required htmlFor="tambah-jabatan">
                   <span className="flex items-center gap-1.5">
-                    <IconBriefcase size={12} /> Jabatan{' '}
-                    <span className="text-muted-foreground font-normal">(Opsional)</span>
+                    <IconBriefcase size={12} />
+                    Jabatan
                   </span>
                 </FieldLabel>
+
                 <span
                   className={cn(
                     'text-xs tabular-nums',
@@ -235,15 +289,20 @@ export function ModalTambahGuru({ open, onClose, onSave }: ModalTambahGuruProps)
                   {jabatan.length}/100
                 </span>
               </div>
+
               <input
                 id="tambah-jabatan"
                 type="text"
                 maxLength={100}
-                placeholder="Contoh: Guru Matematika / Kepala Sekolah"
+                placeholder="Contoh: Guru Matematika"
                 value={jabatan}
                 onChange={(e) => {
                   setJabatan(e.target.value)
-                  setError((p) => ({ ...p, jabatan: undefined as unknown as string }))
+
+                  setError((p) => ({
+                    ...p,
+                    jabatan: '',
+                  }))
                 }}
                 className={cn(
                   inputBase,
@@ -252,66 +311,51 @@ export function ModalTambahGuru({ open, onClose, onSave }: ModalTambahGuruProps)
                     : ''
                 )}
               />
+
               <FieldError message={error.jabatan} />
             </div>
 
-            {/* Image URL */}
+            {/* Foto */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <FieldLabel htmlFor="tambah-image-url">
+                <FieldLabel required htmlFor="tambah-image-url">
                   <span className="flex items-center gap-1.5">
-                    <IconLink size={12} /> URL Foto Profil{' '}
-                    <span className="text-muted-foreground font-normal">(Opsional)</span>
+                    <IconLink size={12} />
+                    Foto Profil
                   </span>
                 </FieldLabel>
               </div>
-              <input
-                id="tambah-image-url"
-                type="url"
-                placeholder="https://example.com/foto.jpg"
-                value={imageUrl}
-                onChange={(e) => {
-                  setImageUrl(e.target.value)
-                  setPreviewError(false)
-                  setError((p) => ({ ...p, imageUrl: undefined as unknown as string }))
+
+              <ImageUploader
+                currentUrl={imageUrl}
+                urlValue={imageUrl}
+                fileValue={imageFile}
+                disabled={saving}
+                error={error.imageUrl}
+                onUrlChange={(url) => {
+                  setImageUrl(url)
+
+                  setError((p) => ({
+                    ...p,
+                    imageUrl: '',
+                  }))
                 }}
-                className={cn(
-                  inputBase,
-                  error.imageUrl
-                    ? 'border-destructive focus:ring-destructive/20 focus:border-destructive'
-                    : ''
-                )}
+                onFileChange={(file) => {
+                  setImageFile(file)
+
+                  if (file) {
+                    setImageUrl('')
+                  }
+
+                  setError((p) => ({
+                    ...p,
+                    imageUrl: '',
+                  }))
+                }}
               />
+
               <FieldError message={error.imageUrl} />
             </div>
-
-            {/* Image Preview */}
-            {showPreview && (
-              <div className="rounded-xl border border-border bg-muted/30 overflow-hidden">
-                <div className="flex items-center gap-2 px-3 py-2 border-b border-border/50">
-                  <IconEye size={12} className="text-muted-foreground" />
-                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                    Pratinjau Foto Profil
-                  </span>
-                </div>
-                {!previewError ? (
-                  <div className="relative w-full h-48 bg-muted/50 flex items-center justify-center overflow-hidden">
-                    <Image
-                      src={imageUrl.trim()}
-                      alt="preview"
-                      fill
-                      className="object-contain"
-                      onError={() => setPreviewError(true)}
-                    />
-                  </div>
-                ) : (
-                  <div className="h-32 flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                    <IconPhoto size={28} className="opacity-40" />
-                    <p className="text-xs">Gagal memuat pratinjau foto</p>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Footer */}
@@ -324,10 +368,13 @@ export function ModalTambahGuru({ open, onClose, onSave }: ModalTambahGuruProps)
             >
               Batal
             </button>
+
             <button
               type="button"
               onClick={handleSave}
-              disabled={saving || !nama.trim()}
+              disabled={
+                saving || !nama.trim() || !jabatan.trim() || (!imageFile && !imageUrl.trim())
+              }
               className="flex items-center gap-2 px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
             >
               {saving ? (

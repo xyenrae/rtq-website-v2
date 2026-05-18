@@ -373,6 +373,17 @@ function Step2({ ringkasan, konten, errors, onChange }: Step2Props) {
           )}
         />
         <FieldError message={errors.konten} />
+        {/* Info waktu baca */}
+        <div className="flex items-start gap-3 p-4 rounded-xl border border-border bg-muted/30">
+          <Clock className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-foreground">Estimasi Waktu Baca Otomatis</p>
+            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+              Waktu baca dihitung otomatis dari panjang konten (~200 kata/menit, rata-rata 5
+              karakter/kata = 1.000 karakter/menit). Tidak perlu diisi manual.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -570,18 +581,6 @@ function Step3({
           </div>
         )}
       </div>
-
-      {/* Info waktu baca */}
-      <div className="flex items-start gap-3 p-4 rounded-xl border border-border bg-muted/30">
-        <Clock className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-        <div>
-          <p className="text-sm font-semibold text-foreground">Estimasi Waktu Baca Otomatis</p>
-          <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-            Waktu baca dihitung otomatis dari panjang konten (~200 kata/menit, rata-rata 5
-            karakter/kata = 1.000 karakter/menit). Tidak perlu diisi manual.
-          </p>
-        </div>
-      </div>
     </div>
   )
 }
@@ -669,7 +668,6 @@ function Step4({
         <input
           id="edit-tanggalDiterbitkan"
           type="datetime-local"
-          min={today}
           value={tanggalDiterbitkan}
           onChange={(e) => onChange('tanggalDiterbitkan', e.target.value)}
           className={inputBase}

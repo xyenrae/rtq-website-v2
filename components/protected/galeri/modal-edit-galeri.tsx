@@ -16,7 +16,7 @@ import {
 } from '@tabler/icons-react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { updateGaleri, type GaleriWithKategori } from '@/lib/galeri'
-import { ImageUploader } from '@/components/protected/galeri/image-uploader'
+import { ImageUploader } from '@/components/image-uploader'
 
 function FieldLabel({
   children,

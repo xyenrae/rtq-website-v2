@@ -16,9 +16,7 @@ export interface BeritaKategori {
   nama: string
   deskripsi: string | null
 }
-
 export interface Berita {
-  tanggal_diterbitkan: any
   id: string
   judul: string
   slug: string
@@ -29,11 +27,13 @@ export interface Berita {
   waktu_baca: number
   status: Status
   kategori_id: string
+
+  tanggal_diterbitkan: string | null
   created_at: string
   updated_at: string
+
   berita_kategori?: BeritaKategori
 }
-
 export interface BeritaInsert {
   judul: string
   slug: string
@@ -44,6 +44,9 @@ export interface BeritaInsert {
   waktu_baca: number
   status: Status
   kategori_id: string
+
+  tanggal_diterbitkan?: string | null
+  created_at?: string
 }
 
 // ─── Client ───────────────────────────────────────────────────────────────────
@@ -67,13 +70,34 @@ export async function fetchBerita(): Promise<Berita[]> {
 
 export async function insertBerita(payload: BeritaInsert): Promise<Berita> {
   const supabase = getClient()
+
+  const insertPayload = {
+    ...payload,
+
+    created_at: payload.created_at || new Date().toISOString(),
+
+    tanggal_diterbitkan:
+      payload.status === 'published'
+        ? payload.tanggal_diterbitkan || new Date().toISOString()
+        : payload.tanggal_diterbitkan || null,
+  }
+
   const { data, error } = await supabase
     .from('berita')
-    .insert(payload)
-    .select('*, berita_kategori(id, nama)')
+    .insert(insertPayload)
+    .select(
+      `
+      *,
+      berita_kategori (
+        id,
+        nama
+      )
+    `
+    )
     .single()
 
   if (error) throw error
+
   return data as Berita
 }
 

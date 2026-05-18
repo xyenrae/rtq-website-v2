@@ -20,7 +20,9 @@ import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { toast } from 'sonner'
 import Image from 'next/image'
-import { fetchGuru, deleteBulkGuru, getJabatanStyle, type Guru } from '@/lib/guru'
+
+import { fetchGuru, deleteBulkGuru, type Guru } from '@/lib/guru'
+
 import { DataTable, type ColumnDef } from '@/components/data-table'
 import { ModalEditGuru } from '@/components/protected/guru/modal-edit-guru'
 import { ModalHapusGuru } from '@/components/protected/guru/modal-hapus-guru'
@@ -36,6 +38,7 @@ function cn(...inputs: ClassValue[]) {
 
 function AvatarCell({ src, name }: { src: string | null; name: string | null }) {
   const [error, setError] = useState(false)
+
   const initials = name
     ? name
         .split(' ')
@@ -95,15 +98,17 @@ function StatCard({
         <div className={`w-11 h-11 rounded-lg flex items-center justify-center shrink-0 ${accent}`}>
           {icon}
         </div>
+
         <div className="flex-1 min-w-0 space-y-0.5">
           <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
             {label}
           </p>
-          <p className="text-2xl font-bold text-foreground leading-tight wrap-break-word">
-            {value}
-          </p>
+
+          <p className="text-2xl font-bold text-foreground leading-tight break-words">{value}</p>
+
           <p className="text-xs text-muted-foreground">{sub}</p>
         </div>
+
         {ctaLabel && onCtaClick && (
           <button
             onClick={(e) => {
@@ -113,6 +118,7 @@ function StatCard({
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shrink-0 mt-1 ${ctaStyles[ctaVariant]}`}
           >
             {ctaLabel}
+
             <IconChevronRight
               size={14}
               className="opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"
@@ -120,6 +126,7 @@ function StatCard({
           </button>
         )}
       </div>
+
       {/* Mobile */}
       <div className="flex sm:hidden flex-col gap-3">
         <div className="flex items-start gap-3">
@@ -128,17 +135,19 @@ function StatCard({
           >
             {icon}
           </div>
+
           <div className="flex-1 min-w-0 space-y-0.5">
             <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide leading-tight">
               {label}
             </p>
-            <p className="text-lg font-bold text-foreground leading-tight wrap-break-word">
-              {value}
-            </p>
+
+            <p className="text-lg font-bold text-foreground leading-tight break-words">{value}</p>
           </div>
         </div>
+
         <div className="flex items-center justify-between">
           <p className="text-[10px] text-muted-foreground">{sub}</p>
+
           {ctaLabel && onCtaClick && (
             <button
               onClick={(e) => {
@@ -177,9 +186,14 @@ export default function GuruPage() {
   const loadData = useCallback(async () => {
     setLoading(true)
     setError(null)
+
     try {
       const list = await fetchGuru()
-      setGurus(list)
+
+      // Urutkan berdasarkan ID terkecil → terbesar
+      const sorted = [...list].sort((a, b) => a.id - b.id)
+
+      setGurus(sorted)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Gagal memuat data')
     } finally {
@@ -214,11 +228,13 @@ export default function GuruPage() {
   // ── Handlers ────────────────────────────────────────────────────────────────
 
   function handleSave(guru: Guru) {
-    setGurus((prev) => [guru, ...prev])
+    setGurus((prev) => [...prev, guru].sort((a, b) => a.id - b.id))
   }
 
   function handleUpdate(updated: Guru) {
-    setGurus((prev) => prev.map((g) => (g.id === updated.id ? updated : g)))
+    setGurus((prev) =>
+      prev.map((g) => (g.id === updated.id ? updated : g)).sort((a, b) => a.id - b.id)
+    )
   }
 
   function handleDeleted(id: number) {
@@ -228,8 +244,17 @@ export default function GuruPage() {
 
   async function handleBulkDelete(keys: (string | number)[]) {
     try {
-      await deleteBulkGuru(keys as number[])
+      const selected = gurus.filter((g) => keys.includes(g.id))
+
+      await deleteBulkGuru(
+        selected.map((g) => ({
+          id: g.id,
+          imageUrl: g.image_url,
+        }))
+      )
+
       setGurus((prev) => prev.filter((g) => !keys.includes(g.id)))
+
       toast.success(`${keys.length} guru berhasil dihapus`)
     } catch (e: unknown) {
       toast.error('Gagal menghapus beberapa guru', {
@@ -246,71 +271,75 @@ export default function GuruPage() {
       header: 'Foto',
       cell: (row) => <AvatarCell src={row.image_url} name={row.nama} />,
     },
+
     {
       key: 'nama',
       header: 'Nama Guru',
       sortable: true,
       cell: (row) => (
         <div className="flex flex-col min-w-0">
-          <span className="font-semibold text-foreground truncate">
-            {row.nama || (
-              <span className="text-muted-foreground italic font-normal text-xs">Tanpa nama</span>
-            )}
-          </span>
-          <span className="text-xs text-muted-foreground">ID #{row.id}</span>
+          <span className="font-semibold text-foreground truncate">{row.nama}</span>
         </div>
       ),
     },
+
     {
       key: 'jabatan',
       header: 'Jabatan',
       sortable: true,
-      cell: (row) => {
-        if (!row.jabatan) {
-          return <span className="text-xs text-muted-foreground italic">—</span>
-        }
-        const style = getJabatanStyle(row.jabatan)
-        return (
-          <span
-            className={cn(
-              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-secondary/50 border-border dark:bg-white/5 dark:border-white/10'
-            )}
-          >
-            <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
-            <span className={style.text}>{row.jabatan}</span>
-          </span>
-        )
-      },
+      cell: (row) => (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border bg-secondary/50 border-border dark:bg-white/5 dark:border-white/10">
+          {row.jabatan}
+        </span>
+      ),
     },
+
     {
       key: 'created_at',
       header: 'Tgl Dibuat',
       sortable: true,
       cell: (row) => {
         const date = new Date(row.created_at)
+
         return (
           <span className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
             <IconCalendar size={12} />
-            {date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+
+            {date.toLocaleDateString('id-ID', {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+            })}
           </span>
         )
       },
     },
+
     {
       key: 'updated_at',
       header: 'Tgl Diperbarui',
       sortable: true,
       cell: (row) => {
-        if (!row.updated_at) return <span className="text-xs text-muted-foreground italic">—</span>
+        if (!row.updated_at) {
+          return <span className="text-xs text-muted-foreground italic">—</span>
+        }
+
         const date = new Date(row.updated_at)
+
         return (
           <span className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
             <IconCalendar size={12} />
-            {date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+
+            {date.toLocaleDateString('id-ID', {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+            })}
           </span>
         )
       },
     },
+
     {
       key: 'aksi',
       header: 'Aksi',
@@ -327,6 +356,7 @@ export default function GuruPage() {
           >
             <IconEdit size={15} />
           </button>
+
           <button
             onClick={() => setDeleteTarget(row)}
             className="p-1.5 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
@@ -350,12 +380,15 @@ export default function GuruPage() {
             <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center">
               <IconUsers size={18} className="text-primary-foreground" />
             </div>
+
             <h1 className="text-2xl font-bold text-foreground">Data Guru</h1>
           </div>
+
           <p className="text-sm text-muted-foreground pl-11">
             Manajemen data guru &amp; tenaga pendidik sekolah
           </p>
         </div>
+
         <div className="flex items-center gap-2">
           <button
             onClick={loadData}
@@ -365,6 +398,7 @@ export default function GuruPage() {
             <IconRefresh size={16} className={loading ? 'animate-spin' : ''} />
             Refresh
           </button>
+
           <button
             onClick={() => setModalTambahOpen(true)}
             className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity shadow-sm"
@@ -381,7 +415,9 @@ export default function GuruPage() {
       {error && (
         <div className="mb-6 flex items-center gap-3 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl px-4 py-3">
           <IconAlertCircle size={18} className="shrink-0" />
+
           <span className="text-sm font-medium">{error}</span>
+
           <button onClick={loadData} className="ml-auto text-xs underline hover:no-underline">
             Coba lagi
           </button>
@@ -403,20 +439,23 @@ export default function GuruPage() {
           sub="Semua tenaga pendidik"
           accent="bg-primary/10"
         />
+
         <StatCard
           icon={<IconBriefcase size={18} className="text-violet-600" />}
           label="Punya Jabatan"
           value={loading ? '—' : guruWithJabatan}
-          sub={loading ? '' : `${totalGuru - guruWithJabatan} belum ada jabatan`}
+          sub={loading ? '' : 'Semua guru memiliki jabatan'}
           accent="bg-violet-100 dark:bg-violet-950"
         />
+
         <StatCard
           icon={<IconUserCheck size={18} className="text-emerald-600" />}
           label="Punya Foto"
           value={loading ? '—' : guruWithFoto}
-          sub={loading ? '' : `${totalGuru - guruWithFoto} belum ada foto`}
+          sub={loading ? '' : 'Semua guru memiliki foto'}
           accent="bg-emerald-100 dark:bg-emerald-950"
         />
+
         <StatCard
           icon={<IconUser size={18} className="text-sky-600" />}
           label="Jabatan Unik"
@@ -426,66 +465,11 @@ export default function GuruPage() {
         />
       </div>
 
-      {/* Filter Jabatan */}
-      {!loading && jabatanList.length > 0 && (
-        <div className="mb-4 flex items-center gap-2 flex-wrap">
-          <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-            <IconFilter size={13} />
-            Filter:
-          </span>
-          <button
-            onClick={() => setFilterJabatan('all')}
-            className={cn(
-              'px-3 py-1 rounded-full text-xs font-medium border transition-all',
-              filterJabatan === 'all'
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-secondary/50 text-muted-foreground border-border hover:border-primary/40 hover:text-foreground'
-            )}
-          >
-            Semua ({totalGuru})
-          </button>
-          <button
-            onClick={() => setFilterJabatan('no-jabatan')}
-            className={cn(
-              'px-3 py-1 rounded-full text-xs font-medium border transition-all',
-              filterJabatan === 'no-jabatan'
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-secondary/50 text-muted-foreground border-border hover:border-primary/40 hover:text-foreground'
-            )}
-          >
-            Tanpa Jabatan ({gurus.filter((g) => !g.jabatan).length})
-          </button>
-          {jabatanList.map((jabatan) => {
-            const style = getJabatanStyle(jabatan)
-            const count = gurus.filter((g) => g.jabatan === jabatan).length
-            return (
-              <button
-                key={jabatan}
-                onClick={() => setFilterJabatan(jabatan)}
-                className={cn(
-                  'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-all',
-                  filterJabatan === jabatan
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'bg-secondary/50 text-muted-foreground border-border hover:border-primary/40 hover:text-foreground'
-                )}
-              >
-                <span
-                  className={cn(
-                    'w-1.5 h-1.5 rounded-full',
-                    filterJabatan === jabatan ? 'bg-primary-foreground' : style.dot
-                  )}
-                />
-                {jabatan} ({count})
-              </button>
-            )
-          })}
-        </div>
-      )}
-
       {/* Table */}
       {loading && gurus.length === 0 ? (
         <div className="flex items-center justify-center h-48 text-muted-foreground gap-2">
           <IconLoader2 size={20} className="animate-spin" />
+
           <span className="text-sm">Memuat data guru...</span>
         </div>
       ) : (
@@ -494,7 +478,7 @@ export default function GuruPage() {
           columns={columns}
           rowKey="id"
           pageSize={10}
-          defaultSort={{ key: 'created_at', direction: 'desc' }}
+          defaultSort={{ key: 'id', direction: 'asc' }}
           searchFields={['nama', 'jabatan']}
           searchPlaceholder="Cari guru berdasarkan nama atau jabatan..."
           selectable
