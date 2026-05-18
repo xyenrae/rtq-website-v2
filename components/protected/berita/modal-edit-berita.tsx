@@ -95,7 +95,7 @@ function FieldError({ message }: { message?: string }) {
   if (!message) return null
   return (
     <p className="flex items-center gap-1.5 text-xs text-destructive mt-1.5">
-      <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
       {message}
     </p>
   )
@@ -350,7 +350,7 @@ function Step2({ ringkasan, konten, errors, onChange }: Step2Props) {
               type="button"
               title={btn.label}
               onClick={() => insertMarkdown(btn.prefix, btn.suffix)}
-              className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             >
               {btn.icon}
             </button>
@@ -564,7 +564,7 @@ function Step3({
               <X className="h-3.5 w-3.5" />
             </button>
 
-            <div className="absolute bottom-0 inset-x-0 px-3 py-2 bg-gradient-to-t from-black/40 to-transparent pointer-events-none z-10">
+            <div className="absolute bottom-0 inset-x-0 px-3 py-2 bg-linear-to-t from-black/40 to-transparent pointer-events-none z-10">
               <p className="text-xs text-white font-medium">Pratinjau Thumbnail</p>
             </div>
           </div>
@@ -745,7 +745,7 @@ function ConfirmDialog({
 }: ConfirmDialogProps) {
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 pointer-events-none">
+    <div className="fixed inset-0 z-100 flex items-center justify-center p-4 pointer-events-none">
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm pointer-events-auto"
         onClick={onCancel}

@@ -241,7 +241,7 @@ export function ImageUploader({
               label={label}
             />
           </div>
-          <div className="flex flex-col gap-0.5 pl-1 md:pl-0 md:justify-center md:min-h-[96px]">
+          <div className="flex flex-col gap-0.5 pl-1 md:pl-0 md:justify-center md:min-h-24">
             {hint && <p className="text-xs text-muted-foreground leading-relaxed">{hint}</p>}
             <p className="text-[10px] text-muted-foreground/70">Format: JPG, PNG, GIF • Max 2MB</p>
           </div>
@@ -270,9 +270,9 @@ export function ImageUploader({
           onDelete={handleDelete}
           label={label}
         />
-        <div className="flex flex-col justify-center gap-1 min-h-[96px]">
+        <div className="flex flex-col justify-center gap-1 min-h-24">
           {hint && (
-            <p className="text-xs text-muted-foreground max-w-[200px] leading-relaxed">{hint}</p>
+            <p className="text-xs text-muted-foreground max-w-50 leading-relaxed">{hint}</p>
           )}
           <p className="text-[10px] text-muted-foreground/70">Format: JPG, PNG, GIF • Max 2MB</p>
         </div>

@@ -355,7 +355,7 @@ export default function AturanCapaianPage() {
     () => isDuplikat(formValues, riwayat, aturan?.id),
     [formValues, riwayat, aturan]
   )
-  
+
   const formBerbedaDariAktif = useMemo(() => {
     if (!aturan) return true
     return (
@@ -503,7 +503,6 @@ export default function AturanCapaianPage() {
 
       const sudahDilatih = !!selectedRiwayat.model_versi
 
-      // langsung reklasifikasi jika model sudah pernah dilatih
       if (sudahDilatih) {
         await reklasifikasiSemua()
       }
@@ -513,15 +512,11 @@ export default function AturanCapaianPage() {
       )
 
       setSavedAturanId(selectedRiwayat.id)
-
-      // retrain hanya kalau belum pernah dilatih
       setNeedsRetrain(!sudahDilatih)
-
       setSelectedRiwayat(null)
 
       await loadData()
 
-      // tampilkan modal retrain hanya jika model belum dilatih
       if (!sudahDilatih) {
         setActiveModal('post-simpan')
       }
@@ -565,7 +560,7 @@ export default function AturanCapaianPage() {
 
         {/* Info banner */}
         <div className="flex items-start gap-3 p-4 bg-primary/5 border border-primary/20 rounded-xl text-sm">
-          <IconInfoCircle size={18} className="text-primary flex-shrink-0 mt-0.5" />
+          <IconInfoCircle size={18} className="text-primary shrink-0 mt-0.5" />
           <div>
             <p className="font-medium text-foreground">Cara Kerja Aturan</p>
             <p className="text-muted-foreground text-xs mt-1">
@@ -579,7 +574,7 @@ export default function AturanCapaianPage() {
         {/* Peringatan duplikat */}
         {hasChanges && formIsDuplikat && (
           <div className="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-xl">
-            <IconX size={18} className="text-red-600 flex-shrink-0 mt-0.5" />
+            <IconX size={18} className="text-red-600 shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-semibold text-red-700 dark:text-red-400">
                 Konfigurasi Ini Sudah Pernah Digunakan
@@ -805,7 +800,7 @@ export default function AturanCapaianPage() {
               {riwayat.length === 0 ? (
                 <p className="text-xs text-muted-foreground text-center py-4">Belum ada riwayat</p>
               ) : (
-                <div className="space-y-2 max-h-[480px] overflow-y-auto">
+                <div className="space-y-2 max-h-120 overflow-y-auto">
                   {sortedRiwayat.map((r, i) => (
                     <RiwayatCard
                       key={r.id}
@@ -831,7 +826,7 @@ export default function AturanCapaianPage() {
 
             {/* Catatan */}
             <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl">
-              <IconAlertTriangle size={14} className="text-amber-600 flex-shrink-0 mt-0.5" />
+              <IconAlertTriangle size={14} className="text-amber-600 shrink-0 mt-0.5" />
               <p className="text-xs text-amber-700 dark:text-amber-400">
                 Setiap aturan menghasilkan model baru. Pastikan melakukan{' '}
                 <strong>Latih Ulang Model</strong> setelah menyimpan atau mengganti aturan aktif.
@@ -884,7 +879,7 @@ export default function AturanCapaianPage() {
           </div>
 
           <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl text-xs text-amber-700 dark:text-amber-400">
-            <IconAlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
+            <IconAlertTriangle size={14} className="shrink-0 mt-0.5" />
             <span>
               Setelah disimpan, Anda akan diminta untuk <strong>Latih Ulang Model</strong> agar
               semua santri diklasifikasi ulang menggunakan aturan baru.
@@ -941,7 +936,7 @@ export default function AturanCapaianPage() {
           </div>
 
           <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl text-xs text-amber-700 dark:text-amber-400">
-            <IconAlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
+            <IconAlertTriangle size={14} className="shrink-0 mt-0.5" />
             <span>
               Setelah direset, lakukan <strong>Latih Ulang Model</strong> agar klasifikasi santri
               diperbarui.
@@ -1231,22 +1226,17 @@ export default function AturanCapaianPage() {
                   onClick={async () => {
                     try {
                       setTrainLoading(true)
-
-                      // tutup modal detail
                       setActiveModal(null)
 
-                      // aktifkan dulu model kalau belum aktif
                       if (!selectedRiwayat.is_active) {
                         await setAturanAktif(selectedRiwayat.id)
                       }
 
-                      // latih ulang model yang dipilih
                       const hasil = await latihUlangModel(selectedRiwayat.id)
 
                       setEvaluasi(hasil)
                       setNeedsRetrain(false)
 
-                      // reklasifikasi semua santri
                       await reklasifikasiSemua()
 
                       toast.success(
@@ -1472,7 +1462,7 @@ export default function AturanCapaianPage() {
                 )}
 
                 <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl text-xs text-amber-700 dark:text-amber-400">
-                  <IconAlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
+                  <IconAlertTriangle size={13} className="shrink-0 mt-0.5" />
                   <span>
                     Setelah diaktifkan, lakukan <strong>Latih Ulang Model</strong> agar semua santri
                     diklasifikasi ulang dengan aturan ini.

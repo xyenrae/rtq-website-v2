@@ -353,7 +353,7 @@ export function DataTable<T extends object>({
                       setOpenFilter(null)
                       setPage(1)
                     }}
-                    className="w-full px-4 py-2.5 text-sm text-left text-muted-foreground hover:bg-accent transition-colors"
+                    className="w-full px-4 py-2.5 text-sm text-left text-muted-foreground hover:bg-muted transition-colors"
                   >
                     Semua {f.label}
                   </button>
@@ -365,7 +365,7 @@ export function DataTable<T extends object>({
                         setOpenFilter(null)
                         setPage(1)
                       }}
-                      className={`w-full px-4 py-2.5 text-sm text-left hover:bg-accent transition-colors ${
+                      className={`w-full px-4 py-2.5 text-sm text-left hover:bg-muted transition-colors ${
                         filterValues[String(f.key)] === opt.value
                           ? 'text-primary font-semibold bg-primary/5'
                           : 'text-foreground'
@@ -585,7 +585,7 @@ export function DataTable<T extends object>({
                     className={`min-w-[36px] h-8 px-2 rounded-md text-sm font-medium transition-all duration-200 ${
                       safePage === p
                         ? 'bg-primary text-primary-foreground shadow-sm scale-105'
-                        : 'border border-input text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:border-accent-foreground/20'
+                        : 'border border-input text-muted-foreground hover:bg-muted hover:text-accent-foreground hover:border-accent-foreground/20'
                     }`}
                   >
                     {p}
@@ -684,7 +684,7 @@ export function DataTable<T extends object>({
                   className={`min-w-[36px] h-9 px-2 rounded-md text-sm font-medium transition-all duration-200 ${
                     safePage === p
                       ? 'bg-primary text-primary-foreground shadow-sm scale-105'
-                      : 'border border-input text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:border-accent-foreground/20'
+                      : 'border border-input text-muted-foreground hover:bg-muted hover:text-accent-foreground hover:border-accent-foreground/20'
                   }`}
                 >
                   {p}

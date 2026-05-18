@@ -3,20 +3,9 @@
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import {
-  IconPlus,
-  IconX,
-  IconCheck,
-  IconLoader2,
-  IconFileDescription,
-  IconPhoto,
-} from '@tabler/icons-react'
+import { IconPlus, IconX, IconCheck, IconLoader2 } from '@tabler/icons-react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
-import {
-  type GaleriKategori,
-  insertGaleriKategori,
-  getGaleriKategoriStyle,
-} from '@/lib/galeri-kategori'
+import { type GaleriKategori, insertGaleriKategori } from '@/lib/galeri-kategori'
 
 // ─── Reusable UI Components ───────────────────────────────────────────────────
 
@@ -117,8 +106,6 @@ export function ModalTambahGaleriKategori({
       setSaving(false)
     }
   }
-
-  const preview = getGaleriKategoriStyle(nama.trim())
 
   return (
     <DialogPrimitive.Root
@@ -249,39 +236,6 @@ export function ModalTambahGaleriKategori({
                 Deskripsi akan muncul sebagai tooltip atau info tambahan di tabel.
               </p>
             </div>
-
-            {/* Preview */}
-            {nama.trim() && (
-              <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                  Pratinjau
-                </p>
-
-                <span
-                  className={cn(
-                    'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-secondary/50',
-                    'border-border dark:bg-white/5 dark:border-white/10'
-                  )}
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full ${preview.dot}`} />
-                  <span className={preview.text}>{nama.trim()}</span>
-                </span>
-
-                {deskripsi.trim() && (
-                  <div className="flex items-start gap-2 pt-1">
-                    <IconFileDescription
-                      size={12}
-                      className="text-muted-foreground mt-0.5 shrink-0"
-                    />
-                    <p className="text-xs text-muted-foreground line-clamp-2">{deskripsi.trim()}</p>
-                  </div>
-                )}
-
-                <p className="text-[10px] text-muted-foreground pt-1 border-t border-border/50">
-                  Begini tampilan kategori ini di tabel galeri.
-                </p>
-              </div>
-            )}
           </div>
 
           {/* Footer */}

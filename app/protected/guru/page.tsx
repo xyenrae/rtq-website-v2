@@ -85,7 +85,7 @@ function StatCard({
 }) {
   const ctaStyles = {
     ghost: 'text-primary hover:bg-primary/10',
-    outline: 'border border-input hover:bg-accent text-foreground',
+    outline: 'border border-input hover:bg-muted text-foreground',
     default: 'bg-primary text-primary-foreground hover:opacity-90',
   }
 
@@ -99,7 +99,9 @@ function StatCard({
           <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
             {label}
           </p>
-          <p className="text-2xl font-bold text-foreground leading-tight break-words">{value}</p>
+          <p className="text-2xl font-bold text-foreground leading-tight wrap-break-word">
+            {value}
+          </p>
           <p className="text-xs text-muted-foreground">{sub}</p>
         </div>
         {ctaLabel && onCtaClick && (
@@ -130,7 +132,9 @@ function StatCard({
             <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide leading-tight">
               {label}
             </p>
-            <p className="text-lg font-bold text-foreground leading-tight break-words">{value}</p>
+            <p className="text-lg font-bold text-foreground leading-tight wrap-break-word">
+              {value}
+            </p>
           </div>
         </div>
         <div className="flex items-center justify-between">
@@ -356,7 +360,7 @@ export default function GuruPage() {
           <button
             onClick={loadData}
             disabled={loading}
-            className="flex items-center gap-2 border border-border text-foreground px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-accent transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 border border-border text-foreground px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-muted transition-colors disabled:opacity-50"
           >
             <IconRefresh size={16} className={loading ? 'animate-spin' : ''} />
             Refresh

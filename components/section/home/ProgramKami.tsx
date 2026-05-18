@@ -66,7 +66,7 @@ export default function ProgramKami() {
                     alt="Icon"
                     width={20}
                     height={20}
-                    className="flex-shrink-0"
+                    className="shrink-0"
                   />
                   <p className="text-sm text-gray-700 md:text-base">{text}</p>
                 </div>

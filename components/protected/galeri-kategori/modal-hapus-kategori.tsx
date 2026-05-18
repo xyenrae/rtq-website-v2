@@ -12,11 +12,7 @@ import {
   IconLoader2,
 } from '@tabler/icons-react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
-import {
-  deleteGaleriKategori,
-  type GaleriKategori,
-  getGaleriKategoriStyle,
-} from '@/lib/galeri-kategori'
+import { deleteGaleriKategori, type GaleriKategori } from '@/lib/galeri-kategori'
 
 // ─── Props Interface ──────────────────────────────────────────────────────────
 
@@ -67,8 +63,6 @@ export function ModalHapusGaleriKategori({
       setDeleting(false)
     }
   }
-
-  const style = getGaleriKategoriStyle(kategori.nama)
 
   return (
     <DialogPrimitive.Root
@@ -143,28 +137,14 @@ export function ModalHapusGaleriKategori({
 
             {/* Detail kategori */}
             <div className="rounded-xl border border-border bg-muted/30 p-4 flex items-center gap-4">
-              <div
-                className={cn(
-                  'w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border',
-                  style.bg,
-                  style.border
-                )}
-              >
-                <IconPhoto size={18} className={style.text} />
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border border-border bg-background">
+                <IconPhoto size={18} className="text-muted-foreground" />
               </div>
+
               <div className="min-w-0">
                 <p className="font-bold text-foreground text-sm">{kategori.nama}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">{galeriCount} foto terkait</p>
               </div>
-              <span
-                className={cn(
-                  'ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-secondary/50',
-                  'border-border dark:bg-white/5 dark:border-white/10'
-                )}
-              >
-                <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
-                <span className={style.text}>{kategori.nama}</span>
-              </span>
             </div>
 
             {/* Konfirmasi */}

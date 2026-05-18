@@ -99,7 +99,7 @@ function FieldError({ message }: { message?: string }) {
   if (!message) return null
   return (
     <p className="flex items-center gap-1.5 text-xs text-destructive mt-1.5">
-      <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
       {message}
     </p>
   )
@@ -365,7 +365,7 @@ function Step2({ ringkasan, konten, errors, onChange }: Step2Props) {
               type="button"
               title={btn.label}
               onClick={() => insertMarkdown(btn.prefix, btn.suffix)}
-              className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             >
               {btn.icon}
             </button>

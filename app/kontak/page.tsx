@@ -281,7 +281,7 @@ export default function KontakPage() {
                   title={`Lokasi ${pengaturan?.nama_rtq ?? 'RTQ'}`}
                 />
               ) : (
-                <div className="h-[360px] flex items-center justify-center bg-muted text-muted-foreground text-xs md:text-sm">
+                <div className="h-90 flex items-center justify-center bg-muted text-muted-foreground text-xs md:text-sm">
                   Peta belum dikonfigurasi
                 </div>
               )}

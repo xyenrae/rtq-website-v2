@@ -22,7 +22,6 @@ import { toast } from 'sonner'
 import {
   fetchGaleri,
   deleteBulkGaleri,
-  getKategoriStyle,
   formatDimensions,
   type GaleriWithKategori,
 } from '@/lib/galeri'
@@ -58,7 +57,7 @@ function StatCard({
 }) {
   const ctaStyles = {
     ghost: 'text-primary hover:bg-primary/10',
-    outline: 'border border-input hover:bg-accent text-foreground',
+    outline: 'border border-input hover:bg-muted text-foreground',
     default: 'bg-primary text-primary-foreground hover:opacity-90',
   }
 
@@ -72,7 +71,9 @@ function StatCard({
           <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
             {label}
           </p>
-          <p className="text-2xl font-bold text-foreground leading-tight break-words">{value}</p>
+          <p className="text-2xl font-bold text-foreground leading-tight wrap-break-word">
+            {value}
+          </p>
           <p className="text-xs text-muted-foreground">{sub}</p>
         </div>
         {ctaLabel && onCtaClick && (
@@ -102,7 +103,9 @@ function StatCard({
             <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide leading-tight">
               {label}
             </p>
-            <p className="text-lg font-bold text-foreground leading-tight break-words">{value}</p>
+            <p className="text-lg font-bold text-foreground leading-tight wrap-break-word">
+              {value}
+            </p>
           </div>
         </div>
         <div className="flex items-center justify-between">
@@ -241,11 +244,11 @@ export default function GaleriPage() {
         if (!row.galeri_kategori) {
           return <span className="text-xs text-muted-foreground italic">—</span>
         }
-        const style = getKategoriStyle(row.galeri_kategori.nama)
+
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-secondary/50 border-border dark:bg-white/5 dark:border-white/10">
-            <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
-            <span className={style.text}>{row.galeri_kategori.nama}</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border border-border bg-muted text-foreground">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+            <span>{row.galeri_kategori.nama}</span>
           </span>
         )
       },
@@ -333,7 +336,7 @@ export default function GaleriPage() {
           <button
             onClick={loadData}
             disabled={loading}
-            className="flex items-center gap-2 border border-border text-foreground px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-accent transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 border border-border text-foreground px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-muted transition-colors disabled:opacity-50"
           >
             <IconRefresh size={16} className={loading ? 'animate-spin' : ''} />
             Refresh
@@ -426,7 +429,6 @@ export default function GaleriPage() {
             Tanpa Kategori ({galeris.filter((g) => !g.galeri_kategori_id).length})
           </button>
           {kategoris.map((k) => {
-            const style = getKategoriStyle(k.nama)
             const count = galeris.filter((g) => g.galeri_kategori_id === k.id).length
             return (
               <button
@@ -442,7 +444,7 @@ export default function GaleriPage() {
                 <span
                   className={cn(
                     'w-1.5 h-1.5 rounded-full',
-                    filterKategori === k.id ? 'bg-primary-foreground' : style.dot
+                    filterKategori === k.id ? 'bg-primary-foreground' : 'bg-primary'
                   )}
                 />
                 {k.nama} ({count})

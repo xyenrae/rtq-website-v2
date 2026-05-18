@@ -149,7 +149,7 @@ export default function RegistrationPage() {
             transition={{ duration: 0.45 }}
             className="flex flex-1 justify-center lg:justify-end"
           >
-            <div className="relative aspect-square w-full max-w-[340px] md:max-w-[460px]">
+            <div className="relative aspect-square w-full max-w-85 md:max-w-115">
               <Image
                 src="/images/hero-3.svg"
                 alt="RTQ Al-Hikmah"

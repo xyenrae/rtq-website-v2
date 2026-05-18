@@ -10,26 +10,15 @@ import {
   IconLoader2,
   IconAlertCircle,
   IconRefresh,
-  IconChevronRight,
   IconHash,
   IconLayoutGrid,
-  IconCheck,
-  IconX,
-  IconAlertTriangle,
   IconFileDescription,
 } from '@tabler/icons-react'
-import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { DataTable, type ColumnDef } from '@/components/data-table'
-import {
-  deleteBulkKategori,
-  getCategoryStyle,
-  fetchKategori,
-  type BeritaKategori,
-} from '@/lib/berita-kategori'
+import { deleteBulkKategori, fetchKategori, type BeritaKategori } from '@/lib/berita-kategori'
 import { fetchBerita, type Berita } from '@/lib/berita'
-import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { ModalDeleteKategori } from '@/components/protected/berita-kategori/modal-delete-kategori'
 import { ModalTambahKategori } from '@/components/protected/berita-kategori/modal-tambah-kategori'
@@ -41,11 +30,6 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// ─── Supabase Kategori Helpers ────────────────────────────────────────────────
-
-function getClient() {
-  return createClient()
-}
 
 // ─── StatCard (same pattern as BeritaPage) ────────────────────────────────────
 
@@ -55,25 +39,13 @@ function StatCard({
   value,
   sub,
   accent,
-  ctaLabel,
-  onCtaClick,
-  ctaVariant = 'ghost',
 }: {
   icon: React.ReactNode
   label: string
   value: string | number
   sub: string
   accent: string
-  ctaLabel?: string
-  onCtaClick?: () => void
-  ctaVariant?: 'ghost' | 'outline' | 'default'
 }) {
-  const ctaStyles = {
-    ghost: 'text-primary hover:bg-primary/10',
-    outline: 'border border-input hover:bg-accent text-foreground',
-    default: 'bg-primary text-primary-foreground hover:opacity-90',
-  }
-
   return (
     <div className="bg-card border border-border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow group">
       {/* Desktop */}
@@ -85,24 +57,11 @@ function StatCard({
           <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
             {label}
           </p>
-          <p className="text-2xl font-bold text-foreground leading-tight break-words">{value}</p>
+          <p className="text-2xl font-bold text-foreground leading-tight wrap-break-word">
+            {value}
+          </p>
           <p className="text-xs text-muted-foreground">{sub}</p>
         </div>
-        {ctaLabel && onCtaClick && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onCtaClick()
-            }}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shrink-0 mt-1 ${ctaStyles[ctaVariant]}`}
-          >
-            {ctaLabel}
-            <IconChevronRight
-              size={14}
-              className="opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"
-            />
-          </button>
-        )}
       </div>
 
       {/* Mobile */}
@@ -117,63 +76,18 @@ function StatCard({
             <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide leading-tight">
               {label}
             </p>
-            <p className="text-lg font-bold text-foreground leading-tight break-words">{value}</p>
+            <p className="text-lg font-bold text-foreground leading-tight wrap-break-word">
+              {value}
+            </p>
           </div>
         </div>
         <div className="flex items-center justify-between">
           <p className="text-[10px] text-muted-foreground">{sub}</p>
-          {ctaLabel && onCtaClick && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onCtaClick()
-              }}
-              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-medium transition-colors shrink-0 ${ctaStyles[ctaVariant]}`}
-            >
-              {ctaLabel}
-              <IconChevronRight size={12} className="opacity-70" />
-            </button>
-          )}
         </div>
       </div>
     </div>
   )
 }
-
-// ─── FieldLabel & FieldError ──────────────────────────────────────────────────
-
-function FieldLabel({
-  children,
-  required,
-  htmlFor,
-}: {
-  children: React.ReactNode
-  required?: boolean
-  htmlFor?: string
-}) {
-  return (
-    <label
-      htmlFor={htmlFor}
-      className="block text-sm font-semibold text-foreground mb-1.5 select-none"
-    >
-      {children}
-      {required && <span className="text-destructive ml-1">*</span>}
-    </label>
-  )
-}
-
-function FieldError({ message }: { message?: string }) {
-  if (!message) return null
-  return (
-    <p className="flex items-center gap-1.5 text-xs text-destructive mt-1.5">
-      <IconAlertCircle size={13} className="flex-shrink-0" />
-      {message}
-    </p>
-  )
-}
-
-const inputBase =
-  'w-full border border-border rounded-lg px-3.5 py-2.5 text-sm bg-background text-foreground placeholder:text-muted-foreground transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-ring'
 
 // ─── KategoriWithCount type ───────────────────────────────────────────────────
 
@@ -200,7 +114,6 @@ export default function BeritaKategoriPage() {
     try {
       const [kategoriList, beritaList] = await Promise.all([fetchKategori(), fetchBerita()])
 
-      // Hitung jumlah berita per kategori
       const countMap: Record<string, number> = {}
       beritaList.forEach((b: Berita) => {
         if (b.kategori_id) {
@@ -240,10 +153,6 @@ export default function BeritaKategoriPage() {
     setKategoris((prev) => prev.map((k) => (k.id === updated.id ? { ...k, ...updated } : k)))
   }
 
-  function handleDeleted(id: string) {
-    setKategoris((prev) => prev.filter((k) => k.id !== id))
-  }
-
   async function handleBulkDelete(keys: string[]) {
     try {
       await deleteBulkKategori(keys)
@@ -263,27 +172,14 @@ export default function BeritaKategoriPage() {
       header: 'Nama Kategori',
       sortable: true,
       cell: (row) => {
-        const style = getCategoryStyle(row.nama)
         const hasDeskripsi = row.deskripsi && row.deskripsi.trim()
 
         return (
           <div className="flex items-start gap-3 min-w-0 max-w-xl">
-            {/* Icon Badge */}
-            <div
-              className={cn(
-                'w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border',
-                style.bg,
-                style.border
-              )}
-            >
-              <IconTag size={14} className={style.text} />
-            </div>
-
             {/* Content */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-foreground truncate">{row.nama}</span>
-                {/* Indicator jika ada deskripsi */}
                 {hasDeskripsi && (
                   <span className="text-muted-foreground/60" title={row.deskripsi || undefined}>
                     <IconFileDescription size={12} />
@@ -291,7 +187,7 @@ export default function BeritaKategoriPage() {
                 )}
               </div>
 
-              {/* Deskripsi (jika ada) */}
+              {/* Deskripsi */}
               {hasDeskripsi && (
                 <p
                   className="text-xs text-muted-foreground mt-0.5 line-clamp-1"
@@ -310,17 +206,13 @@ export default function BeritaKategoriPage() {
       header: 'Jumlah Berita',
       sortable: true,
       cell: (row) => {
-        const style = getCategoryStyle(row.nama)
         return (
-          <div className="flex items-center">
-            <span
-              className={cn(
-                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-secondary/50 border-border dark:bg-white/5 dark:border-white/10'
-              )}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
-              <span className={style.text}>{row.nama}</span>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-secondary/50 border-border text-foreground dark:bg-white/5 dark:border-white/10">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+              <span>{row.nama}</span>
             </span>
+
             <span className="flex items-center gap-1 text-sm text-muted-foreground">
               <IconNews size={13} />
               {row.beritaCount} berita
@@ -334,12 +226,11 @@ export default function BeritaKategoriPage() {
       header: 'Proporsi',
       cell: (row) => {
         const pct = totalBerita > 0 ? Math.round((row.beritaCount / totalBerita) * 100) : 0
-        const style = getCategoryStyle(row.nama)
         return (
-          <div className="flex items-center gap-2 min-w-[120px] md:min-w-[240px]">
+          <div className="flex items-center gap-2 min-w-30 md:min-w-60">
             <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
               <div
-                className={cn('h-full rounded-full transition-all duration-500', style.dot)}
+                className={cn('h-full rounded-full transition-all duration-500 bg-primary')}
                 style={{ width: `${pct}%` }}
               />
             </div>
@@ -399,7 +290,7 @@ export default function BeritaKategoriPage() {
           <button
             onClick={loadData}
             disabled={loading}
-            className="flex items-center gap-2 border border-border text-foreground px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-accent transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 border border-border text-foreground px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-muted transition-colors disabled:opacity-50"
           >
             <IconRefresh size={16} className={loading ? 'animate-spin' : ''} />
             Refresh
@@ -468,9 +359,6 @@ export default function BeritaKategoriPage() {
                 : 'Belum ada berita'
           }
           accent="bg-emerald-100 dark:bg-emerald-950"
-          ctaLabel="Edit"
-          onCtaClick={() => kategoriTerbanyak && setEditKategori(kategoriTerbanyak)}
-          ctaVariant="outline"
         />
       </div>
 
@@ -524,9 +412,7 @@ export default function BeritaKategoriPage() {
           kategori={deleteKategoriTarget}
           beritaCount={deleteKategoriTarget.beritaCount}
           onDeleted={(id) => {
-            // Update state lokal: hapus kategori dari list
             setKategoris((prev) => prev.filter((k) => k.id !== id))
-            // Reset target delete
             setDeleteKategoriTarget(null)
           }}
         />

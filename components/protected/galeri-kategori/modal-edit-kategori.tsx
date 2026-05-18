@@ -5,11 +5,7 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { IconEdit, IconX, IconCheck, IconLoader2, IconFileDescription } from '@tabler/icons-react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
-import {
-  type GaleriKategori,
-  updateGaleriKategori,
-  getGaleriKategoriStyle,
-} from '@/lib/galeri-kategori'
+import { type GaleriKategori, updateGaleriKategori } from '@/lib/galeri-kategori'
 
 // ─── Reusable UI Components ───────────────────────────────────────────────────
 
@@ -124,9 +120,6 @@ export function ModalEditGaleriKategori({
       setSaving(false)
     }
   }
-
-  const preview = getGaleriKategoriStyle(nama.trim())
-  const oldStyle = getGaleriKategoriStyle(kategori.nama)
 
   return (
     <DialogPrimitive.Root
@@ -277,23 +270,16 @@ export function ModalEditGaleriKategori({
                     <span className="text-[10px] font-semibold text-muted-foreground uppercase w-16">
                       Nama
                     </span>
+
                     <div className="flex items-center gap-2 flex-1">
-                      <span
-                        className={cn(
-                          'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-secondary/50 border-border dark:bg-white/5 dark:border-white/10 line-through opacity-60'
-                        )}
-                      >
-                        <span className={`w-1.5 h-1.5 rounded-full ${oldStyle.dot}`} />
-                        <span className={oldStyle.text}>{kategori.nama}</span>
+                      <span className="inline-flex items-center rounded-full border border-border bg-muted/40 px-2.5 py-1 text-xs font-medium text-muted-foreground line-through opacity-60">
+                        {kategori.nama}
                       </span>
+
                       <span className="text-xs text-muted-foreground">→</span>
-                      <span
-                        className={cn(
-                          'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-secondary/50 border-border dark:bg-white/5 dark:border-white/10'
-                        )}
-                      >
-                        <span className={`w-1.5 h-1.5 rounded-full ${preview.dot}`} />
-                        <span className={preview.text}>{nama.trim()}</span>
+
+                      <span className="inline-flex items-center rounded-full border border-border bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground">
+                        {nama.trim()}
                       </span>
                     </div>
                   </div>

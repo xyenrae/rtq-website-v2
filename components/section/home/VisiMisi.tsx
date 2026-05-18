@@ -105,7 +105,7 @@ export default function VisiMisi() {
                       transition={{ delay: index * 0.1 }}
                       className="group flex items-start gap-3 p-4 rounded-xl bg-card/40 border border-border hover:border-primary/50 hover:bg-card/80 hover:shadow-sm transition-all duration-300 backdrop-blur-sm"
                     >
-                      <span className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg bg-primary/10 text-primary text-xs font-bold group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                      <span className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg bg-primary/10 text-primary text-xs font-bold group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                         {index + 1}
                       </span>
                       <p className="text-xs leading-relaxed text-muted-foreground group-hover:text-foreground transition-colors md:text-sm">

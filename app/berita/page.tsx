@@ -155,7 +155,7 @@ export default function BeritaPage() {
 
             <div className="space-y-3 shrink-0">
               <p className="text-sm font-medium text-muted-foreground text-right">Urutkan</p>
-              <Tabs defaultValue="terbaru" className="w-[260px]" onValueChange={setActiveTab}>
+              <Tabs defaultValue="terbaru" className="w-65" onValueChange={setActiveTab}>
                 <TabsList className="grid w-full grid-cols-2 border bg-muted/50">
                   <TabsTrigger
                     value="terbaru"

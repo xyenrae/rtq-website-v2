@@ -14,7 +14,7 @@ import {
   IconLock,
 } from '@tabler/icons-react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
-import { insertGaleri, getKategoriStyle, type GaleriWithKategori } from '@/lib/galeri'
+import { insertGaleri, type GaleriWithKategori } from '@/lib/galeri'
 import { ImageUploader } from '@/components/protected/galeri/image-uploader'
 
 function FieldLabel({
@@ -194,8 +194,6 @@ export function ModalTambahGaleri({ open, onClose, onSave, kategoris }: ModalTam
   }
 
   const selectedKategori = kategoris.find((k) => k.id === kategoriId)
-
-  const kategoriStyle = selectedKategori ? getKategoriStyle(selectedKategori.nama) : null
 
   const hasImage = !!imageFile || (!!imageUrl.trim() && /^https?:\/\/.+/.test(imageUrl.trim()))
 
@@ -433,12 +431,12 @@ export function ModalTambahGaleri({ open, onClose, onSave, kategoris }: ModalTam
 
               <FieldError message={error.kategoriId} />
 
-              {selectedKategori && kategoriStyle && (
+              {selectedKategori && (
                 <div className="mt-2">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-secondary/50 border-border dark:bg-white/5 dark:border-white/10">
-                    <span className={`w-1.5 h-1.5 rounded-full ${kategoriStyle.dot}`} />
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-secondary/50 border-border text-foreground dark:bg-white/5 dark:border-white/10">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
 
-                    <span className={kategoriStyle.text}>{selectedKategori.nama}</span>
+                    <span>{selectedKategori.nama}</span>
                   </span>
                 </div>
               )}

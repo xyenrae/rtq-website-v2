@@ -10,7 +10,6 @@ import {
   IconLoader2,
   IconAlertCircle,
   IconRefresh,
-  IconChevronRight,
   IconHash,
   IconLayoutGrid,
   IconFileDescription,
@@ -23,7 +22,6 @@ import { toast } from 'sonner'
 import {
   fetchGaleriKategori,
   deleteBulkGaleriKategori,
-  getGaleriKategoriStyle,
   type GaleriKategori,
 } from '@/lib/galeri-kategori'
 import { createClient } from '@/lib/supabase/client'
@@ -69,54 +67,41 @@ function StatCard({
   value,
   sub,
   accent,
-  ctaLabel,
-  onCtaClick,
-  ctaVariant = 'ghost',
 }: {
   icon: React.ReactNode
   label: string
   value: string | number
   sub: string
   accent: string
-  ctaLabel?: string
-  onCtaClick?: () => void
-  ctaVariant?: 'ghost' | 'outline' | 'default'
 }) {
-  const ctaStyles = {
-    ghost: 'text-primary hover:bg-primary/10',
-    outline: 'border border-input hover:bg-accent text-foreground',
-    default: 'bg-primary text-primary-foreground hover:opacity-90',
-  }
-
   return (
-    <div className="bg-card border border-border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow group">
+    <div className="bg-card border border-border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
       {/* Desktop */}
       <div className="hidden sm:flex items-start gap-4">
         <div className={`w-11 h-11 rounded-lg flex items-center justify-center shrink-0 ${accent}`}>
           {icon}
         </div>
-        <div className="flex-1 min-w-0 space-y-0.5">
+
+        <div className="flex-1 min-w-0">
           <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
             {label}
           </p>
-          <p className="text-2xl font-bold text-foreground leading-tight break-words">{value}</p>
-          <p className="text-xs text-muted-foreground">{sub}</p>
+
+          {/* tinggi konsisten */}
+          <div className="h-8 flex items-center">
+            <p
+              className={cn(
+                'font-bold text-foreground leading-tight truncate',
+                typeof value === 'number' ? 'text-2xl' : 'text-lg'
+              )}
+              title={String(value)}
+            >
+              {value}
+            </p>
+          </div>
+
+          <p className="text-xs text-muted-foreground mt-1 truncate">{sub}</p>
         </div>
-        {ctaLabel && onCtaClick && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onCtaClick()
-            }}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shrink-0 mt-1 ${ctaStyles[ctaVariant]}`}
-          >
-            {ctaLabel}
-            <IconChevronRight
-              size={14}
-              className="opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"
-            />
-          </button>
-        )}
       </div>
 
       {/* Mobile */}
@@ -127,28 +112,27 @@ function StatCard({
           >
             {icon}
           </div>
-          <div className="flex-1 min-w-0 space-y-0.5">
+
+          <div className="flex-1 min-w-0">
             <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide leading-tight">
               {label}
             </p>
-            <p className="text-lg font-bold text-foreground leading-tight break-words">{value}</p>
+
+            <div className="h-6.5 flex items-center">
+              <p
+                className={cn(
+                  'font-bold text-foreground leading-tight truncate',
+                  typeof value === 'number' ? 'text-lg' : 'text-sm'
+                )}
+                title={String(value)}
+              >
+                {value}
+              </p>
+            </div>
           </div>
         </div>
-        <div className="flex items-center justify-between">
-          <p className="text-[10px] text-muted-foreground">{sub}</p>
-          {ctaLabel && onCtaClick && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onCtaClick()
-              }}
-              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-medium transition-colors shrink-0 ${ctaStyles[ctaVariant]}`}
-            >
-              {ctaLabel}
-              <IconChevronRight size={12} className="opacity-70" />
-            </button>
-          )}
-        </div>
+
+        <p className="text-[10px] text-muted-foreground truncate">{sub}</p>
       </div>
     </div>
   )
@@ -234,29 +218,25 @@ export default function GaleriKategoriPage() {
       header: 'Nama Kategori',
       sortable: true,
       cell: (row) => {
-        const style = getGaleriKategoriStyle(row.nama)
         const hasDeskripsi = row.deskripsi && row.deskripsi.trim()
 
         return (
           <div className="flex items-start gap-3 min-w-0 max-w-xl">
-            <div
-              className={cn(
-                'w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border',
-                style.bg,
-                style.border
-              )}
-            >
-              <IconPhoto size={14} className={style.text} />
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border border-border bg-muted/40">
+              <IconPhoto size={14} className="text-muted-foreground" />
             </div>
+
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-foreground truncate">{row.nama}</span>
+
                 {hasDeskripsi && (
                   <span className="text-muted-foreground/60" title={row.deskripsi || undefined}>
                     <IconFileDescription size={12} />
                   </span>
                 )}
               </div>
+
               {hasDeskripsi && (
                 <p
                   className="text-xs text-muted-foreground mt-0.5 line-clamp-1"
@@ -275,17 +255,13 @@ export default function GaleriKategoriPage() {
       header: 'Jumlah Foto',
       sortable: true,
       cell: (row) => {
-        const style = getGaleriKategoriStyle(row.nama)
         return (
           <div className="flex items-center gap-3">
-            <span
-              className={cn(
-                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-secondary/50 border-border dark:bg-white/5 dark:border-white/10'
-              )}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
-              <span className={style.text}>{row.nama}</span>
+            <span className="inline-flex items-center rounded-full border border-border bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground">
+              <IconTag size={11} className="mr-1.5 text-muted-foreground" />
+              {row.nama}
             </span>
+
             <span className="flex items-center gap-1 text-sm text-muted-foreground">
               <IconBadge size={13} />
               {row.galeriCount} foto
@@ -299,15 +275,16 @@ export default function GaleriKategoriPage() {
       header: 'Proporsi',
       cell: (row) => {
         const pct = totalGaleri > 0 ? Math.round((row.galeriCount / totalGaleri) * 100) : 0
-        const style = getGaleriKategoriStyle(row.nama)
+
         return (
-          <div className="flex items-center gap-2 min-w-[120px] md:min-w-[240px]">
+          <div className="flex items-center gap-2 min-w-30 md:min-w-60">
             <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
               <div
-                className={cn('h-full rounded-full transition-all duration-500', style.dot)}
+                className="h-full rounded-full bg-primary transition-all duration-500"
                 style={{ width: `${pct}%` }}
               />
             </div>
+
             <span className="text-xs text-muted-foreground tabular-nums w-8 text-right">
               {pct}%
             </span>
@@ -364,7 +341,7 @@ export default function GaleriKategoriPage() {
           <button
             onClick={loadData}
             disabled={loading}
-            className="flex items-center gap-2 border border-border text-foreground px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-accent transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 border border-border text-foreground px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-muted transition-colors disabled:opacity-50"
           >
             <IconRefresh size={16} className={loading ? 'animate-spin' : ''} />
             Refresh
@@ -433,9 +410,6 @@ export default function GaleriKategoriPage() {
                 : 'Belum ada foto'
           }
           accent="bg-emerald-100 dark:bg-emerald-950"
-          ctaLabel="Edit"
-          onCtaClick={() => kategoriTerbanyak && setEditKategori(kategoriTerbanyak)}
-          ctaVariant="outline"
         />
       </div>
 

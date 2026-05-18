@@ -15,12 +15,7 @@ import {
   IconCalendar,
 } from '@tabler/icons-react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
-import {
-  deleteGaleri,
-  formatDimensions,
-  type GaleriWithKategori,
-  getKategoriStyle,
-} from '@/lib/galeri'
+import { deleteGaleri, formatDimensions, type GaleriWithKategori } from '@/lib/galeri'
 import Image from 'next/image'
 
 export interface ModalHapusGaleriProps {
@@ -65,10 +60,6 @@ export function ModalHapusGaleri({ open, onClose, galeri, onDeleted }: ModalHapu
       setDeleting(false)
     }
   }
-
-  const kategoriStyle = galeri.galeri_kategori
-    ? getKategoriStyle(galeri.galeri_kategori.nama)
-    : null
 
   const formattedDate = galeri.created_at
     ? new Date(galeri.created_at).toLocaleDateString('id-ID', {
@@ -157,11 +148,11 @@ export function ModalHapusGaleri({ open, onClose, galeri, onDeleted }: ModalHapu
                     <span className="text-xs">Pratinjau tidak tersedia</span>
                   </div>
                 )}
-                {galeri.galeri_kategori && kategoriStyle && (
+                {galeri.galeri_kategori && (
                   <div className="absolute bottom-2 left-2 z-10">
-                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border bg-card/90 backdrop-blur-sm border-border">
-                      <span className={`w-1.5 h-1.5 rounded-full ${kategoriStyle.dot}`} />
-                      <span className={kategoriStyle.text}>{galeri.galeri_kategori.nama}</span>
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border bg-card/90 backdrop-blur-sm border-border text-foreground">
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      <span>{galeri.galeri_kategori.nama}</span>
                     </span>
                   </div>
                 )}
@@ -189,7 +180,7 @@ export function ModalHapusGaleri({ open, onClose, galeri, onDeleted }: ModalHapu
                       {formattedDate}
                     </span>
                   )}
-                  <span className="flex items-center gap-1 text-xs text-muted-foreground truncate max-w-[200px]">
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground truncate max-w-50">
                     <IconLink size={11} />
                     <span className="truncate">{galeri.image_url}</span>
                   </span>

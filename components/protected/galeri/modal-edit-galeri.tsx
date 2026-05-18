@@ -15,7 +15,7 @@ import {
   IconLink,
 } from '@tabler/icons-react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
-import { updateGaleri, getKategoriStyle, type GaleriWithKategori } from '@/lib/galeri'
+import { updateGaleri, type GaleriWithKategori } from '@/lib/galeri'
 import { ImageUploader } from '@/components/protected/galeri/image-uploader'
 
 function FieldLabel({
@@ -227,8 +227,6 @@ export function ModalEditGaleri({
 
   const selectedKategori = kategoris.find((k) => k.id === kategoriId)
 
-  const kategoriStyle = selectedKategori ? getKategoriStyle(selectedKategori.nama) : null
-
   return (
     <DialogPrimitive.Root
       open={open}
@@ -269,7 +267,7 @@ export function ModalEditGaleri({
                   Edit Foto Galeri
                 </DialogPrimitive.Title>
 
-                <p className="mt-0.5 max-w-[220px] truncate text-xs text-muted-foreground">
+                <p className="mt-0.5 max-w-55 truncate text-xs text-muted-foreground">
                   {galeri.judul || galeri.id}
                 </p>
               </div>
@@ -480,11 +478,11 @@ export function ModalEditGaleri({
 
               <FieldError message={error.kategoriId} />
 
-              {selectedKategori && kategoriStyle && (
+              {selectedKategori && (
                 <div className="mt-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary/50 px-2.5 py-1 text-xs font-medium dark:border-white/10 dark:bg-white/5">
-                    <span className={cn('h-1.5 w-1.5 rounded-full', kategoriStyle.dot)} />
-                    <span className={kategoriStyle.text}>{selectedKategori.nama}</span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary/50 px-2.5 py-1 text-xs font-medium text-foreground dark:border-white/10 dark:bg-white/5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    <span>{selectedKategori.nama}</span>
                   </span>
                 </div>
               )}
@@ -533,7 +531,7 @@ export function ModalEditGaleri({
 
                     <span className="text-muted-foreground">Gambar baru:</span>
 
-                    <span className="max-w-[160px] truncate font-medium text-foreground">
+                    <span className="max-w-40 truncate font-medium text-foreground">
                       {imageFile.name}
                     </span>
                   </div>

@@ -179,9 +179,7 @@ export default function GaleriPage() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Hero */}
       <section className="relative overflow-hidden">
-        {/* Tinggi hero: auto di mobile mengikuti konten, fixed di desktop */}
-        <div className="relative flex min-h-[340px] items-center justify-center md:min-h-[60vh]">
-          {/* Background image */}
+        <div className="relative flex min-h-85 items-center justify-center md:min-h-[60vh]">
           <div className="absolute inset-0">
             {heroImageUrl && !heroError ? (
               <Image
@@ -195,12 +193,11 @@ export default function GaleriPage() {
                 onError={() => setHeroError(true)}
               />
             ) : (
-              <div className="h-full w-full bg-gradient-to-br from-muted to-muted/60" />
+              <div className="h-full w-full bg-linear-to-br from-muted to-muted/60" />
             )}
             <div className="absolute inset-0 bg-black/65" />
           </div>
 
-          {/* Konten hero — padding vertikal mengontrol tinggi di mobile */}
           <div className="relative z-10 w-full max-w-3xl space-y-3 px-4 py-16 text-center md:space-y-4 md:py-0">
             <Badge
               variant="outline"
@@ -285,7 +282,7 @@ export default function GaleriPage() {
           </div>
         )}
 
-        <div ref={sentinelRef} className="mt-10 flex min-h-[60px] justify-center">
+        <div ref={sentinelRef} className="mt-10 flex min-h-15 justify-center">
           {loadingMore && <LoadMoreSpinner />}
         </div>
       </section>
@@ -391,7 +388,7 @@ function LightboxImage({
 
   return (
     <div className="relative overflow-hidden bg-black">
-      <div className="relative aspect-[4/3] w-full sm:aspect-[16/9] md:aspect-[16/8]">
+      <div className="relative aspect-4/3 w-full sm:aspect-video md:aspect-16/8">
         {error ? (
           <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-white/40">
             <IconPhoto size={36} strokeWidth={1.2} />

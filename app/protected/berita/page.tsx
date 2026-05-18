@@ -65,7 +65,7 @@ function StatCard({
 }) {
   const ctaStyles = {
     ghost: 'text-primary hover:bg-primary/10',
-    outline: 'border border-input hover:bg-accent text-foreground',
+    outline: 'border border-input hover:bg-muted text-foreground',
     default: 'bg-primary text-primary-foreground hover:opacity-90',
   }
 
@@ -80,7 +80,9 @@ function StatCard({
           <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
             {label}
           </p>
-          <p className="text-2xl font-bold text-foreground leading-tight break-words">{value}</p>
+          <p className="text-2xl font-bold text-foreground leading-tight wrap-break-word">
+            {value}
+          </p>
           <p className="text-xs text-muted-foreground">{sub}</p>
         </div>
         {ctaLabel && onCtaClick && (
@@ -112,7 +114,9 @@ function StatCard({
             <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide leading-tight">
               {label}
             </p>
-            <p className="text-lg font-bold text-foreground leading-tight break-words">{value}</p>
+            <p className="text-lg font-bold text-foreground leading-tight wrap-break-word">
+              {value}
+            </p>
           </div>
         </div>
         <div className="flex items-center justify-between">
@@ -133,27 +137,6 @@ function StatCard({
       </div>
     </div>
   )
-}
-
-// ─── Category Colors ──────────────────────────────────────────────────────────
-
-const DYNAMIC_COLORS = [
-  { text: 'text-blue-600 dark:text-blue-400', dot: 'bg-blue-600 dark:bg-blue-400' },
-  { text: 'text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-600 dark:bg-emerald-400' },
-  { text: 'text-amber-600 dark:text-amber-400', dot: 'bg-amber-600 dark:bg-amber-400' },
-  { text: 'text-violet-600 dark:text-violet-400', dot: 'bg-violet-600 dark:bg-violet-400' },
-  { text: 'text-rose-600 dark:text-rose-400', dot: 'bg-rose-600 dark:bg-rose-400' },
-  { text: 'text-cyan-600 dark:text-cyan-400', dot: 'bg-cyan-600 dark:bg-cyan-400' },
-  { text: 'text-orange-600 dark:text-orange-400', dot: 'bg-orange-600 dark:bg-orange-400' },
-]
-
-function getCategoryStyle(name: string) {
-  if (!name) return DYNAMIC_COLORS[0]
-  let hash = 0
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  return DYNAMIC_COLORS[Math.abs(hash) % DYNAMIC_COLORS.length]
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -206,8 +189,6 @@ export default function BeritaPage() {
     loadData()
   }, [loadData])
 
-  // ── Auto-open edit modal dari ?edit=<id> (CTA dari dashboard) ─────────────
-
   useEffect(() => {
     const editId = searchParams.get('edit')
     if (!editId || data.length === 0) return
@@ -216,7 +197,6 @@ export default function BeritaPage() {
     if (!target) return
 
     setEditBerita(target)
-    // Bersihkan param dari URL agar bisa trigger ulang di klik berikutnya
     router.replace('/protected/berita', { scroll: false })
   }, [searchParams, data, router])
 
@@ -300,11 +280,11 @@ export default function BeritaPage() {
       header: 'Kategori',
       cell: (row) => {
         const nama = row.berita_kategori?.nama ?? '-'
-        const style = getCategoryStyle(nama)
+
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-secondary/50 border-border dark:bg-white/5 dark:border-white/10">
-            <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
-            <span className={style.text}>{nama}</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-secondary/50 border-border text-foreground dark:bg-white/5 dark:border-white/10">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+            <span>{nama}</span>
           </span>
         )
       },
@@ -391,7 +371,7 @@ export default function BeritaPage() {
               <button
                 onClick={() => setConfirmDeleteId(null)}
                 disabled={deletingId === row.id}
-                className="px-2 py-1 text-xs bg-secondary text-secondary-foreground rounded-lg font-medium hover:bg-accent transition-colors disabled:opacity-60"
+                className="px-2 py-1 text-xs bg-secondary text-secondary-foreground rounded-lg font-medium hover:bg-muted transition-colors disabled:opacity-60"
               >
                 Tidak
               </button>
@@ -431,7 +411,7 @@ export default function BeritaPage() {
           <button
             onClick={loadData}
             disabled={loading}
-            className="flex items-center gap-2 border border-border text-foreground px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-accent transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 border border-border text-foreground px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-muted transition-colors disabled:opacity-50"
           >
             <IconRefresh size={16} className={loading ? 'animate-spin' : ''} />
             Refresh
@@ -487,9 +467,6 @@ export default function BeritaPage() {
           value={loading ? '—' : totalViews.toLocaleString()}
           sub="Akumulasi berita"
           accent="bg-sky-100 dark:bg-sky-950"
-          ctaLabel="Analisis"
-          onCtaClick={() => {}}
-          ctaVariant="outline"
         />
         <StatCard
           icon={<IconBookmark size={18} className="text-emerald-600" />}

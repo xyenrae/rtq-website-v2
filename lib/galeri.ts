@@ -49,77 +49,13 @@ export interface UpdateGaleriInput {
 
 const BUCKET = 'galeri_images'
 
-const DYNAMIC_COLORS = [
-  {
-    text: 'text-blue-600 dark:text-blue-400',
-    dot: 'bg-blue-600 dark:bg-blue-400',
-    bg: 'bg-blue-100 dark:bg-blue-950',
-    border: 'border-blue-200 dark:border-blue-800',
-  },
-  {
-    text: 'text-emerald-600 dark:text-emerald-400',
-    dot: 'bg-emerald-600 dark:bg-emerald-400',
-    bg: 'bg-emerald-100 dark:bg-emerald-950',
-    border: 'border-emerald-200 dark:border-emerald-800',
-  },
-  {
-    text: 'text-amber-600 dark:text-amber-400',
-    dot: 'bg-amber-600 dark:bg-amber-400',
-    bg: 'bg-amber-100 dark:bg-amber-950',
-    border: 'border-amber-200 dark:border-amber-800',
-  },
-  {
-    text: 'text-violet-600 dark:text-violet-400',
-    dot: 'bg-violet-600 dark:bg-violet-400',
-    bg: 'bg-violet-100 dark:bg-violet-950',
-    border: 'border-violet-200 dark:border-violet-800',
-  },
-  {
-    text: 'text-rose-600 dark:text-rose-400',
-    dot: 'bg-rose-600 dark:bg-rose-400',
-    bg: 'bg-rose-100 dark:bg-rose-950',
-    border: 'border-rose-200 dark:border-rose-800',
-  },
-  {
-    text: 'text-cyan-600 dark:text-cyan-400',
-    dot: 'bg-cyan-600 dark:bg-cyan-400',
-    bg: 'bg-cyan-100 dark:bg-cyan-950',
-    border: 'border-cyan-200 dark:border-cyan-800',
-  },
-  {
-    text: 'text-orange-600 dark:text-orange-400',
-    dot: 'bg-orange-600 dark:bg-orange-400',
-    bg: 'bg-orange-100 dark:bg-orange-950',
-    border: 'border-orange-200 dark:border-orange-800',
-  },
-  {
-    text: 'text-pink-600 dark:text-pink-400',
-    dot: 'bg-pink-600 dark:bg-pink-400',
-    bg: 'bg-pink-100 dark:bg-pink-950',
-    border: 'border-pink-200 dark:border-pink-800',
-  },
-]
-
-export function getKategoriStyle(name: string) {
-  if (!name) return DYNAMIC_COLORS[0]
-
-  let hash = 0
-
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  }
-
-  return DYNAMIC_COLORS[Math.abs(hash) % DYNAMIC_COLORS.length]
-}
+// ─── Client ───────────────────────────────────────────────────────────────────
 
 function getClient() {
   return createClient()
 }
 
-function getStoragePath(id: string, file: File): string {
-  const ext = file.name.split('.').pop() ?? 'jpg'
-  return `public/${id}.${ext}`
-}
+// ─── Storage Helpers ──────────────────────────────────────────────────────────
 
 function getStoragePathFromUrl(url: string): string | null {
   try {
@@ -137,6 +73,8 @@ function getStoragePathFromUrl(url: string): string | null {
   }
 }
 
+// ─── Transform ────────────────────────────────────────────────────────────────
+
 function transformRelasi(data: RawGaleri[]): GaleriWithKategori[] {
   return data.map((item) => ({
     id: item.id,
@@ -150,6 +88,8 @@ function transformRelasi(data: RawGaleri[]): GaleriWithKategori[] {
     galeri_kategori: item.galeri_kategori?.[0] ?? null,
   }))
 }
+
+// ─── Query Fields ─────────────────────────────────────────────────────────────
 
 const SELECT_FIELDS = `
   id,
@@ -165,6 +105,8 @@ const SELECT_FIELDS = `
     nama
   )
 `
+
+// ─── Storage ──────────────────────────────────────────────────────────────────
 
 export async function uploadImage(id: string, file: File): Promise<string> {
   const supabase = getClient()
@@ -195,6 +137,8 @@ export async function deleteStorageImage(imageUrl: string): Promise<void> {
   await supabase.storage.from(BUCKET).remove([path])
 }
 
+// ─── Fetch ────────────────────────────────────────────────────────────────────
+
 export async function fetchGaleri(): Promise<GaleriWithKategori[]> {
   const supabase = getClient()
 
@@ -208,6 +152,8 @@ export async function fetchGaleri(): Promise<GaleriWithKategori[]> {
 
   return transformRelasi(data as RawGaleri[])
 }
+
+// ─── Insert ───────────────────────────────────────────────────────────────────
 
 export async function insertGaleri(
   input: InsertGaleriInput,
@@ -266,6 +212,8 @@ export async function insertGaleri(
     galeri_kategori: item.galeri_kategori?.[0] ?? null,
   }
 }
+
+// ─── Update ───────────────────────────────────────────────────────────────────
 
 export async function updateGaleri(
   id: string,
@@ -342,6 +290,8 @@ export async function updateGaleri(
   }
 }
 
+// ─── Delete ───────────────────────────────────────────────────────────────────
+
 export async function deleteGaleri(id: string, imageUrl: string): Promise<void> {
   const supabase = getClient()
 
@@ -372,8 +322,12 @@ export async function deleteBulkGaleri(
   }
 }
 
+// ─── Utilities ────────────────────────────────────────────────────────────────
+
 export function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024) {
+    return `${bytes} B`
+  }
 
   if (bytes < 1024 * 1024) {
     return `${(bytes / 1024).toFixed(1)} KB`
